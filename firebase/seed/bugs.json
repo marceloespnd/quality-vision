@@ -1,0 +1,38 @@
+[
+  {
+    "id": "BUG-342",
+    "desc": "Timeout na consulta de elegibilidade",
+    "status": "Em análise",
+    "owner": "Backend",
+    "developer": "George",
+    "squad": "Core Fibra",
+    "createdAt": "2026-04-10T09:05:00Z",
+    "updatedAt": "2026-04-15T09:30:00Z",
+    "createdBy": "Marcelo",
+    "updatedBy": "Marcelo"
+  },
+  {
+    "id": "BUG-349",
+    "desc": "Divergência no resumo de pedido",
+    "status": "Corrigido",
+    "owner": "Frontend",
+    "developer": "Aline",
+    "squad": "CX App",
+    "createdAt": "2026-04-12T09:40:00Z",
+    "updatedAt": "2026-04-15T11:00:00Z",
+    "createdBy": "Marcelo",
+    "updatedBy": "Marcelo"
+  },
+  {
+    "id": "BUG-355",
+    "desc": "Erro ao atualizar pacote contratado",
+    "status": "Crítico",
+    "owner": "Integrações",
+    "developer": "Rafael",
+    "squad": "B2B Digital",
+    "createdAt": "2026-04-11T11:10:00Z",
+    "updatedAt": "2026-04-15T13:45:00Z",
+    "createdBy": "Marcelo",
+    "updatedBy": "Marcelo"
+  }
+]

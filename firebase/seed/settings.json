@@ -1,0 +1,14 @@
+[
+  {
+    "id": "qualityVision",
+    "successRateTarget": 85,
+    "slaDays": 3,
+    "logoPath": "./assets/logo-vtal.png",
+    "projectName": "Portal Comercial B2C",
+    "squadName": "Core Fibra",
+    "managerName": "Juliana Martins",
+    "qaName": "Marcelo",
+    "updatedAt": "2026-04-15T15:00:00Z",
+    "updatedBy": "Marcelo"
+  }
+]

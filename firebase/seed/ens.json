@@ -1,0 +1,62 @@
+[
+  {
+    "id": "EN-1021",
+    "desc": "Validação do fluxo de contratação digital",
+    "status": "Finalizado",
+    "squad": "Core Fibra",
+    "project": "Portal Comercial B2C",
+    "owner": "Marcelo",
+    "createdAt": "2026-04-10T09:00:00Z",
+    "updatedAt": "2026-04-15T09:30:00Z",
+    "createdBy": "Marcelo",
+    "updatedBy": "Marcelo"
+  },
+  {
+    "id": "EN-1022",
+    "desc": "Teste de autenticação com múltiplos perfis",
+    "status": "Bloqueado",
+    "squad": "Core Fibra",
+    "project": "Portal Comercial B2C",
+    "owner": "Marcelo",
+    "createdAt": "2026-04-10T10:00:00Z",
+    "updatedAt": "2026-04-15T10:10:00Z",
+    "createdBy": "Marcelo",
+    "updatedBy": "Marcelo"
+  },
+  {
+    "id": "EN-1023",
+    "desc": "Validação de jornada de upgrade de plano",
+    "status": "Impactado",
+    "squad": "B2B Digital",
+    "project": "Upgrade Jornada",
+    "owner": "Marcelo",
+    "createdAt": "2026-04-11T11:00:00Z",
+    "updatedAt": "2026-04-15T13:40:00Z",
+    "createdBy": "Marcelo",
+    "updatedBy": "Marcelo"
+  },
+  {
+    "id": "EN-1024",
+    "desc": "Cobertura do fluxo de cancelamento",
+    "status": "Pendente",
+    "squad": "Core Fibra",
+    "project": "Portal Comercial B2C",
+    "owner": "Marcelo",
+    "createdAt": "2026-04-11T12:00:00Z",
+    "updatedAt": "2026-04-15T14:00:00Z",
+    "createdBy": "Marcelo",
+    "updatedBy": "Marcelo"
+  },
+  {
+    "id": "EN-1025",
+    "desc": "Teste E2E do onboarding residencial",
+    "status": "Finalizado",
+    "squad": "CX App",
+    "project": "Onboarding App",
+    "owner": "Marcelo",
+    "createdAt": "2026-04-12T09:30:00Z",
+    "updatedAt": "2026-04-15T15:00:00Z",
+    "createdBy": "Marcelo",
+    "updatedBy": "Marcelo"
+  }
+]

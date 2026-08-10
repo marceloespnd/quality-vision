@@ -1,0 +1,20 @@
+[
+  {
+    "id": "LOG-1",
+    "message": "Execução regressiva concluída no ambiente de homologação.",
+    "createdAt": "2026-04-15T09:00:00Z",
+    "createdBy": "Marcelo"
+  },
+  {
+    "id": "LOG-2",
+    "message": "Validação do fluxo de login finalizada sem desvios.",
+    "createdAt": "2026-04-15T10:10:00Z",
+    "createdBy": "Marcelo"
+  },
+  {
+    "id": "LOG-3",
+    "message": "Cenários de integração aguardando retorno da API parceira.",
+    "createdAt": "2026-04-15T13:40:00Z",
+    "createdBy": "Marcelo"
+  }
+]

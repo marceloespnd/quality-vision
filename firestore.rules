@@ -1,0 +1,163 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true ||
+        request.auth.token.role in ['admin', 'qa_admin']
+      );
+    }
+
+    function isEditor() {
+      return isSignedIn() && (
+        request.auth.token.role in ['editor', 'qa_editor', 'qa_admin'] ||
+        isAdmin()
+      );
+    }
+
+    function isReader() {
+      return isSignedIn() && (
+        request.auth.token.role in ['viewer', 'editor', 'qa_editor', 'qa_admin'] ||
+        isAdmin()
+      );
+    }
+
+    function validEnStatus(status) {
+      return status in ['Finalizado', 'Em andamento', 'Bloqueado', 'Impactado', 'Pendente'];
+    }
+
+    function validBugStatus(status) {
+      return status in ['Em análise', 'Corrigido', 'Crítico', 'Novo'];
+    }
+
+    function isShortText(value, min, max) {
+      return value is string && value.size() >= min && value.size() <= max;
+    }
+
+    match /ens/{enId} {
+      allow read: if isReader();
+
+      allow create: if isEditor()
+        && request.resource.data.keys().hasOnly([
+          'desc', 'status', 'squad', 'project', 'owner',
+          'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
+        ])
+        && isShortText(request.resource.data.desc, 5, 300)
+        && validEnStatus(request.resource.data.status)
+        && isShortText(request.resource.data.squad, 2, 80)
+        && isShortText(request.resource.data.project, 2, 120)
+        && isShortText(request.resource.data.owner, 2, 80)
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp
+        && isShortText(request.resource.data.createdBy, 2, 120)
+        && isShortText(request.resource.data.updatedBy, 2, 120);
+
+      allow update: if isEditor()
+        && request.resource.data.keys().hasOnly([
+          'desc', 'status', 'squad', 'project', 'owner', 'week', 'bug',
+          'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
+        ])
+        && resource.data.createdAt == request.resource.data.createdAt
+        && resource.data.createdBy == request.resource.data.createdBy
+        && isShortText(request.resource.data.desc, 5, 300)
+        && validEnStatus(request.resource.data.status)
+        && isShortText(request.resource.data.squad, 2, 80)
+        && isShortText(request.resource.data.project, 2, 120)
+        && isShortText(request.resource.data.owner, 2, 80)
+        && request.resource.data.updatedAt is timestamp
+        && isShortText(request.resource.data.updatedBy, 2, 120);
+
+      allow delete: if isAdmin();
+    }
+
+    match /bugs/{bugId} {
+      allow read: if isReader();
+
+      allow create: if isEditor()
+        && request.resource.data.keys().hasOnly([
+          'desc', 'status', 'owner', 'developer', 'squad', 'createdAt', 'updatedAt',
+          'createdBy', 'updatedBy'
+        ])
+        && isShortText(request.resource.data.desc, 5, 300)
+        && validBugStatus(request.resource.data.status)
+        && isShortText(request.resource.data.owner, 2, 80)
+        && (!request.resource.data.keys().hasAny(['developer'])
+          || isShortText(request.resource.data.developer, 0, 80))
+        && isShortText(request.resource.data.squad, 2, 80)
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt is timestamp
+        && isShortText(request.resource.data.createdBy, 2, 120)
+        && isShortText(request.resource.data.updatedBy, 2, 120);
+
+      allow update: if isEditor()
+        && request.resource.data.keys().hasOnly([
+          'desc', 'status', 'owner', 'developer', 'squad', 'createdAt', 'updatedAt',
+          'createdBy', 'updatedBy'
+        ])
+        && resource.data.createdAt == request.resource.data.createdAt
+        && resource.data.createdBy == request.resource.data.createdBy
+        && isShortText(request.resource.data.desc, 5, 300)
+        && validBugStatus(request.resource.data.status)
+        && isShortText(request.resource.data.owner, 2, 80)
+        && (!request.resource.data.keys().hasAny(['developer'])
+          || isShortText(request.resource.data.developer, 0, 80))
+        && isShortText(request.resource.data.squad, 2, 80)
+        && request.resource.data.updatedAt is timestamp
+        && isShortText(request.resource.data.updatedBy, 2, 120);
+
+      allow delete: if isAdmin();
+    }
+
+    match /logs/{logId} {
+      allow read: if isReader();
+
+      allow create: if isEditor()
+        && request.resource.data.keys().hasOnly([
+          'message', 'createdAt', 'createdBy'
+        ])
+        && isShortText(request.resource.data.message, 3, 500)
+        && request.resource.data.createdAt is timestamp
+        && isShortText(request.resource.data.createdBy, 2, 120);
+
+      allow update: if isEditor()
+        && request.resource.data.keys().hasOnly([
+          'message', 'createdAt', 'createdBy'
+        ])
+        && resource.data.createdAt == request.resource.data.createdAt
+        && resource.data.createdBy == request.resource.data.createdBy
+        && isShortText(request.resource.data.message, 3, 500);
+
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{docId} {
+      allow read: if isReader();
+
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'successRateTarget', 'slaDays', 'logoPath', 'projectName',
+          'squadName', 'managerName', 'qaName', 'updatedAt', 'updatedBy'
+        ])
+        && request.resource.data.successRateTarget is number
+        && request.resource.data.successRateTarget >= 0
+        && request.resource.data.successRateTarget <= 100
+        && request.resource.data.slaDays is number
+        && request.resource.data.slaDays >= 0
+        && request.resource.data.slaDays <= 365
+        && isShortText(request.resource.data.logoPath, 1, 500)
+        && isShortText(request.resource.data.projectName, 2, 120)
+        && isShortText(request.resource.data.squadName, 2, 80)
+        && isShortText(request.resource.data.managerName, 2, 120)
+        && isShortText(request.resource.data.qaName, 2, 120)
+        && request.resource.data.updatedAt is timestamp
+        && isShortText(request.resource.data.updatedBy, 2, 120);
+
+      allow delete: if isAdmin();
+    }
+  }
+}
