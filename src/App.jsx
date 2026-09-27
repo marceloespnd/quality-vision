@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Chart as ChartJS,
   ArcElement,
@@ -20,9 +20,16 @@ import {
 } from 'firebase/firestore'
 import { db, hasFirebaseConfig } from './firebase'
 import { mockEns, mockBugs, mockLogs } from './mockData'
-import { APP_VERSION, COPYRIGHT, baseStatuses, bugStatuses, statusColor, tabs, taskTypes } from './constants'
+import Impacts from './components/Impacts'
+import Scenarios from './components/Scenarios'
+import ProjectOverview from './components/ProjectOverview'
+import FlowCatalog from './components/FlowCatalog'
+import useNavigation from './hooks/useNavigation'
+import { APP_VERSION, COPYRIGHT, baseStatuses, bugStatuses, featureLabels, statusColor, tabs, taskTypes } from './constants'
 import { cx, normalizeDate, uniq } from './utils'
 import { Button, Card, ConfigList, EmptyState, Field, inputClass, LimitSelect, LogSection, RecordCard, SectionTitle, SelectField, StatCard, TaskRow } from './components/ui'
+import { saveLocalRecords } from './hooks/useRecords'
+import seedFlows from '../firebase/seed/flows.json'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
@@ -71,6 +78,10 @@ function loadConfigData() {
   }
 }
 
+function projectRecordId(name) {
+  return `project-${name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`
+}
+
 function SidebarToggleIcon({ collapsed }) {
   return (
     <span className="flex items-center gap-2">
@@ -83,17 +94,18 @@ function SidebarToggleIcon({ collapsed }) {
 }
 
 function QaUserPill({ compact = false }) {
+  const [avatarError, setAvatarError] = useState(false)
+
   return (
     <div className={cx('flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[var(--text)] shadow-sm', compact && 'justify-center px-2')}>
       <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--blue-soft)] text-sm font-bold text-[var(--blue)] ring-1 ring-[var(--blue)]/20">
-        {loggedQa.name.slice(0, 1)}
+        {avatarError ? loggedQa.name.slice(0, 1) : <img src="/profile-photo.png?v=20260927" alt={`Foto de ${loggedQa.name}`} className="h-full w-full object-cover" onError={() => setAvatarError(true)} />}
       </div>
       {!compact && (
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold leading-tight">{loggedQa.name}</p>
         </div>
       )}
-      {!compact && <span className="text-base text-[var(--muted)]">⌄</span>}
     </div>
   )
 }
@@ -123,13 +135,15 @@ function SegmentedControl({ value, onChange, options }) {
 }
 
 export default function App() {
+  const [language, setLanguage] = useState(() => localStorage.getItem('quality-vision-language') || 'pt-BR')
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('quality-vision-theme')
     if (savedTheme) return savedTheme
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   })
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('quality-vision-sidebar') === 'collapsed')
-  const [activeTab, setActiveTab] = useState(tabs[0])
+  const { tab: activeTab, params: routeParams, navigate } = useNavigation()
+  const setActiveTab = (tab) => navigate(tab)
   const [search, setSearch] = useState('')
   const [squadFilter, setSquadFilter] = useState('Todos')
   const [projectFilter, setProjectFilter] = useState('Todos')
@@ -143,6 +157,22 @@ export default function App() {
   const [feedback, setFeedback] = useState('')
   const [feedbackTone, setFeedbackTone] = useState('success')
   const [pendingDeleteTask, setPendingDeleteTask] = useState(null)
+  const [taskModalOpen, setTaskModalOpen] = useState(false)
+  const [savingTask, setSavingTask] = useState(false)
+  const [taskError, setTaskError] = useState('')
+  const taskDialogRef = useRef(null)
+
+  useEffect(() => {
+    if (!taskModalOpen) return
+    const dialog = taskDialogRef.current
+    const previousOverflow = document.body.style.overflow
+    dialog.showModal()
+    document.body.style.overflow = 'hidden'
+    return () => {
+      dialog.close()
+      document.body.style.overflow = previousOverflow
+    }
+  }, [taskModalOpen])
 
   const [newEn, setNewEn] = useState({ desc: '', status: 'Pendente', type: 'Testes', squad: 'Core Fibra', project: 'Portal Comercial B2C', owner: loggedQa.name })
   const [newBug, setNewBug] = useState({ desc: '', status: 'Novo', owner: '', developer: '', squad: 'Core Fibra' })
@@ -156,6 +186,9 @@ export default function App() {
   const [editingConfig, setEditingConfig] = useState({ type: '', value: '' })
   const [catalogTab, setCatalogTab] = useState('projects')
   const [workflowTab, setWorkflowTab] = useState('status')
+  const [configAddTarget, setConfigAddTarget] = useState('project')
+  const [configurationTab, setConfigurationTab] = useState(() => routeParams.view === 'registrations' ? 'flows' : 'general')
+  const [flowAddRequest, setFlowAddRequest] = useState(0)
 
   const showFeedback = (message, tone = 'success') => {
     setFeedbackTone(tone)
@@ -163,8 +196,13 @@ export default function App() {
   }
 
   useEffect(() => {
+    document.documentElement.lang = language
+    localStorage.setItem('quality-vision-language', language)
+  }, [language])
+
+  useEffect(() => {
     document.documentElement.dataset.theme = theme
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#0F172A' : '#2563EB')
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#071B30' : '#0176D3')
     localStorage.setItem('quality-vision-theme', theme)
   }, [theme])
 
@@ -175,6 +213,47 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('quality-vision-config', JSON.stringify(configData))
   }, [configData])
+
+  useEffect(() => {
+    const projectRecords = configData.projects.map((name) => ({
+      id: projectRecordId(name),
+      name,
+      owner: loggedQa.name,
+      squad: configData.projectSquads[name] || '',
+    }))
+
+    if (hasFirebaseConfig && db) {
+      Promise.all(projectRecords.map(({ id, ...data }) => setDoc(doc(db, 'projects', id), data, { merge: true }))).catch(() => {})
+      return
+    }
+
+    try {
+      const stored = JSON.parse(localStorage.getItem('quality-vision-projects') || '[]')
+      const existing = Array.isArray(stored) ? stored : []
+      const merged = [...existing]
+      projectRecords.forEach((record) => {
+        const index = merged.findIndex((item) => item.id === record.id)
+        if (index === -1) merged.push(record)
+        else merged[index] = { ...merged[index], ...record }
+      })
+      if (merged.length !== existing.length || projectRecords.some((record) => existing.some((item) => item.id === record.id && (item.name !== record.name || item.squad !== record.squad)))) saveLocalRecords('projects', merged)
+    } catch {
+      saveLocalRecords('projects', projectRecords)
+    }
+  }, [configData.projects, configData.projectSquads])
+
+  useEffect(() => {
+    if (hasFirebaseConfig && db) return
+    try {
+      const stored = JSON.parse(localStorage.getItem('quality-vision-flows') || '[]')
+      const existing = Array.isArray(stored) ? stored : []
+      const posnetFlows = seedFlows.filter((flow) => flow.projectId === 'project-posnet')
+      const missing = posnetFlows.filter((seed) => !existing.some((flow) => flow.projectId === seed.projectId && flow.name.toLocaleLowerCase('pt-BR') === seed.name.toLocaleLowerCase('pt-BR')))
+      if (missing.length) saveLocalRecords('flows', [...existing, ...missing])
+    } catch {
+      saveLocalRecords('flows', seedFlows.filter((flow) => flow.projectId === 'project-posnet'))
+    }
+  }, [])
 
   useEffect(() => {
     localStorage.removeItem('quality-vision-managers')
@@ -257,10 +336,10 @@ export default function App() {
     const active = (stats['Em andamento'] || 0) + attention
     const activeFilters = [
       squadFilter !== 'Todos' && `Squad: ${squadFilter}`,
-      projectFilter !== 'Todos' && `Projeto: ${projectFilter}`,
+      projectFilter !== 'Todos' && `Project: ${projectFilter}`,
       qaFilter !== 'Todos' && `QA: ${qaFilter}`,
       statusFilter !== 'Todos' && `Status: ${statusFilter}`,
-      search.trim() && `Busca: ${search.trim()}`,
+      search.trim() && `Search: ${search.trim()}`,
     ].filter(Boolean)
 
     return {
@@ -277,13 +356,13 @@ export default function App() {
       .slice(0, 3)
 
     return {
-      completedLabel: `${stats.Finalizado || 0} de ${stats.total || 0} tarefas concluídas`,
+      completedLabel: `${stats.Finalizado || 0} of ${stats.total || 0} tasks completed`,
       activeFlow: (stats['Em andamento'] || 0) + (stats.Pendente || 0),
       attentionItems,
     }
   }, [filteredEns, stats])
 
-  const canSaveTask = Boolean(newEn.desc.trim() && newEn.project.trim())
+  const canSaveTask = Boolean(newEn.desc.trim() && newEn.project.trim() && newEn.type && newEn.squad && newEn.owner.trim())
 
   const filteredTaskList = useMemo(() => ens.filter((item) => (
     (taskFilters.status === 'Todos' || item.status === taskFilters.status) &&
@@ -296,15 +375,15 @@ export default function App() {
     labels: dashboardStatuses,
     datasets: [{
       data: dashboardStatuses.map((status) => stats[status]),
-      backgroundColor: dashboardStatuses.map((status) => statusColor[status] || '#6B7280'),
+      backgroundColor: dashboardStatuses.map((status) => (theme === 'dark' ? { Finalizado: '#34D399', 'Em andamento': '#78C4FF', Bloqueado: '#FB923C', Impactado: '#FB923C', Pendente: '#9CA3AF' }[status] : statusColor[status]) || '#6B7280'),
       borderWidth: 0,
     }],
-  }), [dashboardStatuses, stats])
+  }), [dashboardStatuses, stats, theme])
 
   const resetEn = () => {
     setEditingEnId(null)
-    const project = projectFilter === 'Todos' ? 'Portal Comercial B2C' : projectFilter
-    setNewEn({ desc: '', status: 'Pendente', type: configData.taskTypes[0] || 'Testes', squad: projectSquads[project] || 'Core Fibra', project, owner: loggedQa.name })
+    const project = projectFilter === 'Todos' ? projects.find((item) => item !== 'Todos') || '' : projectFilter
+    setNewEn({ desc: '', status: 'Pendente', type: configData.taskTypes[0] || 'Testes', squad: projectSquads[project] || configData.squads[0] || '', project, owner: loggedQa.name })
   }
 
   const resetBug = () => {
@@ -318,18 +397,27 @@ export default function App() {
   }
 
   const saveEn = async () => {
-    if (!canSaveTask) return
-    const payload = { ...newEn, desc: newEn.desc.trim(), owner: loggedQa.name, updatedAt: hasFirebaseConfig && db ? serverTimestamp() : normalizeDate(), updatedBy: loggedQa.name }
-    if (hasFirebaseConfig && db) {
-      if (editingEnId) await updateDoc(doc(db, 'ens', editingEnId), payload)
-      else await setDoc(doc(db, 'ens', `EN-${Date.now()}`), { ...payload, createdAt: serverTimestamp(), createdBy: loggedQa.name })
-    } else if (editingEnId) {
-      setEns((current) => current.map((item) => item.id === editingEnId ? { ...item, ...payload } : item))
-    } else {
-      setEns((current) => [{ id: `EN-${Date.now()}`, ...payload, createdAt: normalizeDate(), createdBy: loggedQa.name }, ...current])
+    if (!canSaveTask || savingTask) return
+    setSavingTask(true)
+    setTaskError('')
+    try {
+      const payload = { ...newEn, desc: newEn.desc.trim(), owner: newEn.owner.trim(), updatedAt: hasFirebaseConfig && db ? serverTimestamp() : normalizeDate(), updatedBy: loggedQa.name }
+      if (hasFirebaseConfig && db) {
+        if (editingEnId) await updateDoc(doc(db, 'ens', editingEnId), payload)
+        else await setDoc(doc(db, 'ens', `EN-${Date.now()}`), { ...payload, createdAt: serverTimestamp(), createdBy: loggedQa.name })
+      } else if (editingEnId) {
+        setEns((current) => current.map((item) => item.id === editingEnId ? { ...item, ...payload } : item))
+      } else {
+        setEns((current) => [{ id: `EN-${Date.now()}`, ...payload, createdAt: normalizeDate(), createdBy: loggedQa.name }, ...current])
+      }
+      showFeedback(editingEnId ? 'Alterações da tarefa salvas com sucesso.' : 'Tarefa cadastrada com sucesso.')
+      resetEn()
+      setTaskModalOpen(false)
+    } catch {
+      setTaskError('Não foi possível salvar a tarefa. Tente novamente.')
+    } finally {
+      setSavingTask(false)
     }
-    showFeedback(editingEnId ? 'Alterações da tarefa salvas com sucesso.' : 'Tarefa cadastrada com sucesso.')
-    resetEn()
   }
 
   const saveBug = async () => {
@@ -387,7 +475,8 @@ export default function App() {
 
   const openTasksByStatus = (status) => {
     setTaskFilters({ status, squad: 'Todos', project: 'Todos', owner: 'Todos' })
-    setActiveTab(tabs[1])
+    setConfigurationTab('registrations')
+    setActiveTab('Configuração')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -527,15 +616,50 @@ export default function App() {
   const changeCatalogTab = (tab) => {
     resetConfigEditor()
     setCatalogTab(tab)
+    setConfigAddTarget(tab === 'projects' ? 'project' : 'squad')
   }
 
   const changeWorkflowTab = (tab) => {
     resetConfigEditor()
     setWorkflowTab(tab)
+    setConfigAddTarget(tab)
+  }
+
+  const selectConfigurationTab = (tab) => {
+    resetConfigEditor()
+    setConfigurationTab(tab)
+    if (['projects', 'squads'].includes(tab)) {
+      setCatalogTab(tab)
+      setConfigAddTarget(tab === 'projects' ? 'project' : 'squad')
+    }
+    if (['types', 'status'].includes(tab)) {
+      setWorkflowTab(tab === 'types' ? 'taskType' : 'status')
+      setConfigAddTarget(tab === 'types' ? 'taskType' : 'status')
+    }
+  }
+
+  const configTarget = {
+    project: { label: 'Projeto', tab: 'catalog' },
+    squad: { label: 'Squad', tab: 'catalog' },
+    status: { label: 'Status', tab: 'workflow' },
+    taskType: { label: 'Tipo de tarefa', tab: 'workflow' },
+  }[configAddTarget]
+  const startConfigAdd = () => {
+    resetConfigEditor()
+    if (configTarget.tab === 'catalog') setCatalogTab(configAddTarget === 'project' ? 'projects' : 'squads')
+    else setWorkflowTab(configAddTarget)
+    setEditingConfig({ type: configAddTarget, value: '' })
+  }
+  const startConfigurationAdd = () => {
+    if (configurationTab === 'flows') return setFlowAddRequest((current) => current + 1)
+    if (configurationTab === 'legacy-tasks') {
+      resetEn(); setTaskError(''); setTaskModalOpen(true); return
+    }
+    startConfigAdd()
   }
 
   const doughnutOptions = useMemo(() => {
-    const muted = theme === 'dark' ? '#CBD5E1' : '#626874'
+    const muted = theme === 'dark' ? '#CBD5E1' : '#526B82'
     return {
       cutout: '58%',
       maintainAspectRatio: false,
@@ -557,8 +681,7 @@ export default function App() {
       <div className="flex min-h-screen">
         <aside className={cx('hidden shrink-0 p-4 transition-all duration-300 xl:block', sidebarCollapsed ? 'w-[112px]' : 'w-[304px]')}>
           <div className={cx('sticky top-4 flex h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] flex-col rounded-[32px] bg-[var(--sidebar)] text-[var(--text)] shadow-2xl transition-all duration-300', sidebarCollapsed ? 'p-3' : 'p-5')}>
-            <div className="mb-4 flex items-center justify-between gap-2">
-              {!sidebarCollapsed && <span className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">Menu</span>}
+            <div className="mb-4 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setSidebarCollapsed((current) => !current)}
@@ -572,22 +695,17 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab(tabs[0])}
+              aria-label="Quality Vision — início"
               className={cx(
                 'isolate shrink-0 overflow-hidden rounded-[26px] border border-[var(--border)] bg-[var(--logo-bg)] text-left transition hover:bg-[var(--logo-hover)]',
-                sidebarCollapsed ? 'p-2' : 'p-4'
+                sidebarCollapsed ? 'h-16 p-2' : 'p-0'
               )}
             >
-              {sidebarCollapsed ? (
-                <div className="flex h-14 w-full items-center justify-center rounded-[20px] text-lg font-bold tracking-tight text-white">
-                  QV
-                </div>
-              ) : (
-                <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(135deg,#2563EB_0%,#8B5CF6_100%)] p-3 text-white">
-                  <div className="flex h-24 items-center justify-center rounded-[18px] border border-white/20 bg-black/10 text-center text-[11px] font-semibold uppercase tracking-[0.24em]">
-                    Quality Vision
-                  </div>
-                </div>
-              )}
+              <img
+                src="/quality-vision-logo.png?v=20260927"
+                alt="Quality Vision"
+                className={cx('quality-vision-logo block w-full object-cover', sidebarCollapsed ? 'h-full object-[50%_50%]' : 'aspect-[2/1] scale-[1.24] object-cover')}
+              />
             </button>
 
             <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,.18)_transparent]">
@@ -601,10 +719,10 @@ export default function App() {
                       sidebarCollapsed ? 'flex h-12 items-center justify-center px-0' : 'px-4 py-3 text-left',
                       activeTab === item ? 'bg-[var(--accent)] text-[var(--accent-text)] shadow-sm shadow-black/20' : 'text-[var(--muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]'
                     )}
-                    title={sidebarCollapsed ? item : undefined}
-                    aria-label={item}
+                    title={sidebarCollapsed ? featureLabels[language][item] : undefined}
+                    aria-label={featureLabels[language][item]}
                   >
-                    {sidebarCollapsed ? ['H', 'T', 'C'][index] : item}
+                    {sidebarCollapsed ? ['H', 'VP', 'C', 'I', 'CO'][index] : featureLabels[language][item]}
                   </button>
                 ))}
               </nav>
@@ -619,30 +737,22 @@ export default function App() {
           </div>
         </aside>
 
-        <main className="flex-1 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.10),transparent_32%),radial-gradient(circle_at_top_right,rgba(139,92,246,0.08),transparent_28%)]">
-          <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--bg)] px-5 py-5 backdrop-blur-xl md:px-8">
+        <main className="flex-1 bg-[radial-gradient(circle_at_top_left,rgba(1,118,211,0.10),transparent_32%),radial-gradient(circle_at_top_right,rgba(27,150,255,0.08),transparent_28%)]">
+          <header className="sticky top-0 z-10 bg-[var(--bg)] px-5 py-5 backdrop-blur-xl md:px-8">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-4">
                 <div>
-                  <h2 className="text-3xl font-semibold tracking-tight">{activeTab === 'Home' ? 'Dashboard Quality Vision' : activeTab}</h2>
+                  <h2 className="text-3xl font-semibold tracking-tight">{activeTab === 'Home' ? (language === 'pt-BR' ? '🏠 Dashboard Quality Vision' : '🏠 Quality Vision Dashboard') : featureLabels[language][activeTab]}</h2>
                 </div>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <QaUserPill />
-                <button
-                  type="button"
-                  onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}
-                  className="h-16 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--text)] shadow-sm transition hover:bg-[var(--hover)]"
-                  aria-label={`Ativar modo ${theme === 'dark' ? 'claro' : 'noturno'}`}
-                  title={`Ativar modo ${theme === 'dark' ? 'claro' : 'noturno'}`}
-                >
-                  {theme === 'dark' ? '☀ Claro' : '☾ Noturno'}
-                </button>
               </div>
             </div>
           </header>
 
-          <div className="space-y-6 p-5 md:p-8">
+          <div className="space-y-4 p-4 md:p-6">
+            <nav aria-label={language === 'pt-BR' ? 'Menu principal' : 'Main menu'} className="flex flex-wrap gap-2 xl:hidden">{tabs.map((tab) => <Button key={tab} variant={tab === activeTab ? 'primary' : 'secondary'} onClick={() => setActiveTab(tab)}>{featureLabels[language][tab]}</Button>)}</nav>
             {feedback && (
               <div className={cx(
                 'rounded-3xl border px-4 py-3 text-sm font-semibold',
@@ -664,10 +774,10 @@ export default function App() {
                       <div className="relative grid gap-5 lg:grid-cols-[1fr_200px] lg:items-center">
                         <div>
                           <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight text-[var(--text)] md:text-5xl">
-                            Painel executivo da qualidade.
+                            Quality executive dashboard.
                           </h1>
                           <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)] md:text-base">
-                            Acompanhe a saúde das tarefas, pontos de atenção e evolução da entrega em uma tela mais direta para decisão.
+                            Monitor task health, risks, and delivery progress in one focused decision-making view.
                           </p>
                         </div>
                         <div className="mx-auto flex h-44 w-44 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] p-3 shadow-soft">
@@ -677,7 +787,7 @@ export default function App() {
                           >
                             <div className="flex h-[78%] w-[78%] flex-col items-center justify-center rounded-full bg-[var(--surface)]">
                               <span className="text-5xl font-semibold tracking-tight text-[var(--text)]">{stats.successRate}%</span>
-                              <span className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Success Rate</span>
+                              <span className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Success rate</span>
                             </div>
                           </div>
                         </div>
@@ -686,129 +796,88 @@ export default function App() {
                   </Card>
 
                   <Card className="flex flex-col justify-between">
-                    <SectionTitle title="Próximo foco" />
+                    <SectionTitle title="Next focus" />
                     <div className={cx('rounded-3xl border p-5', taskOverview.attention ? 'border-[var(--orange)] bg-[var(--orange-soft)]' : 'border-[var(--green)] bg-[var(--green-soft)]')}>
                       <p className={cx('text-5xl font-semibold tracking-tight', taskOverview.attention ? 'text-[var(--orange)]' : 'text-[var(--green)]')}>{taskOverview.attention}</p>
-                      <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Itens em risco</p>
+                      <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">At-risk items</p>
                       <p className="mt-2 text-sm leading-6 text-[var(--text)]">
-                        {taskOverview.attention ? 'Priorizar itens bloqueados/impactados antes de puxar novas tarefas.' : 'Fluxo sem bloqueios críticos no recorte atual.'}
+                        {taskOverview.attention ? 'Prioritize blocked or impacted items before pulling new tasks.' : 'No critical blockers in the current view.'}
                       </p>
                     </div>
                   </Card>
                 </section>
 
                 <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                  <StatCard title="Total EN" value={stats.total} sub="Tarefas mapeadas" />
-                  <StatCard title="Finalizado" value={stats.Finalizado} sub="Ver tarefas concluídas" onClick={() => openTasksByStatus('Finalizado')} />
-                  <StatCard title="Bloqueado" value={stats.Bloqueado} sub="Ver tarefas bloqueadas" onClick={() => openTasksByStatus('Bloqueado')} />
-                  <StatCard title="Impactado" value={stats.Impactado} sub="Ver tarefas impactadas" onClick={() => openTasksByStatus('Impactado')} />
-                  <StatCard title="Total Bugs" value={filteredBugs.length} sub="Defeitos no contexto" />
+                  <StatCard title="Total tasks" value={stats.total} sub="Mapped tasks" />
+                  <StatCard title="Completed" value={stats.Finalizado} sub="View completed tasks" onClick={() => openTasksByStatus('Finalizado')} />
+                  <StatCard title="Blocked" value={stats.Bloqueado} sub="View blocked tasks" onClick={() => openTasksByStatus('Bloqueado')} />
+                  <StatCard title="Impacted" value={stats.Impactado} sub="View impacted tasks" onClick={() => openTasksByStatus('Impactado')} />
+                  <StatCard title="Total bugs" value={filteredBugs.length} sub="Defects in context" />
                 </section>
 
-                <section className="grid grid-cols-1 gap-6 2xl:grid-cols-[0.72fr_1.28fr]">
-                  <Card>
-                    <SectionTitle title="Status das tarefas" />
+                <section className="grid min-w-0 grid-cols-1 gap-6 2xl:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]">
+                  <Card className="min-w-0">
+                    <SectionTitle title="Task status" />
                     <div className="h-[300px]"><Doughnut data={doughnutData} options={doughnutOptions} /></div>
                   </Card>
 
-                  <Card>
-                    <SectionTitle title="Itens que pedem atenção" />
-                    <div className="grid gap-3 md:grid-cols-2">
+                  <Card className="min-w-0">
+                    <SectionTitle title="Items needing attention" />
+                    <div className="grid min-w-0 gap-3 md:grid-cols-2">
                       {homeInsights.attentionItems.map((item) => (
                         <RecordCard key={item.id} title={item.desc} status={item.status} meta={`${item.id} • ${item.type || 'Testes'} • ${item.project} • ${item.squad} • QA: ${item.owner}`} />
                       ))}
-                      {!homeInsights.attentionItems.length && <EmptyState>Nenhuma tarefa bloqueada ou impactada no momento.</EmptyState>}
+                      {!homeInsights.attentionItems.length && <EmptyState>No blocked or impacted tasks right now.</EmptyState>}
                     </div>
                   </Card>
                 </section>
               </>
             )}
 
-            {activeTab === tabs[1] && (
-              <>
-                <Card className="overflow-hidden">
-                  <SectionTitle
-                    title={editingEnId ? 'Editar tarefa' : 'Cadastro de nova tarefa'}
-                    action={
-                      <div className="flex flex-wrap gap-2">
-                        {editingEnId && <Button variant="secondary" onClick={resetEn}>Nova tarefa</Button>}
-                      </div>
-                    }
-                  />
+            {activeTab === 'Configuração' && (
+              <div className="flex items-start justify-between gap-3">
+                <nav aria-label="Submenu de configuração" className="flex flex-wrap gap-2">
+                  {[['general', 'General'], ['projects', 'Projects'], ['flows', 'Flows'], ['squads', 'Squads'], ['types', 'Types'], ['status', 'Statuses']].map(([value, label]) => <Button key={value} variant={configurationTab === value ? 'primary' : 'secondary'} onClick={() => selectConfigurationTab(value)}>{label}</Button>)}
+                </nav>
+                {configurationTab !== 'general' && <Button disabled={configurationTab === 'flows' && !configData.projects.length} onClick={startConfigurationAdd}>Adicionar</Button>}
+              </div>
+            )}
 
-                  <div className="rounded-[24px] border border-[var(--border)] bg-[var(--surface-muted)] p-4 md:p-5">
-                    <div className="mb-5 flex flex-col gap-2 border-b border-[var(--border)] pb-4 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-sm text-[var(--muted)]">Crie uma tarefa objetiva para o projeto selecionado. Novas tarefas começam como pendentes e ficam atribuídas ao QA logado.</p>
-                      {editingEnId && <span className="w-fit rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-[var(--accent-text)]">Editando tarefa</span>}
-                    </div>
+            {activeTab === 'Configuração' && configurationTab === 'flows' && <FlowCatalog owner={loggedQa.name} addRequest={flowAddRequest} />}
 
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-[1.4fr_0.9fr_1fr_1fr_0.9fr]">
-                      <Field label="Cadastro de nova tarefa">
-                        <input
-                          value={newEn.desc}
-                          onChange={(e) => setNewEn((c) => ({ ...c, desc: e.target.value }))}
-                          placeholder="Ex: Validar fluxo de contratação digital"
-                          className={cx(inputClass, 'bg-[var(--surface)]')}
-                        />
-                      </Field>
-                      {editingEnId && <SelectField label="Status" value={newEn.status} onChange={(e) => setNewEn((c) => ({ ...c, status: e.target.value }))} options={taskStatuses} />}
-                      <SelectField label="Tipo de tarefa" value={newEn.type} onChange={(e) => setNewEn((c) => ({ ...c, type: e.target.value }))} options={configData.taskTypes.length ? configData.taskTypes : taskTypes} />
-                      <SelectField
-                        label="Projeto"
-                        value={newEn.project}
-                        onChange={(e) => {
-                          const project = e.target.value
-                          setNewEn((current) => ({ ...current, project, squad: projectSquads[project] || current.squad }))
-                        }}
-                        options={projects.filter((item) => item !== 'Todos')}
-                      />
-                      <Field label="Squad">
-                        <input value={newEn.squad} readOnly className={cx(inputClass, 'cursor-not-allowed bg-[var(--surface)] text-[var(--muted)]')} />
-                      </Field>
-                      <Field label="Responsável QA">
-                        <input value={loggedQa.name} readOnly className={cx(inputClass, 'cursor-not-allowed bg-[var(--surface)] text-[var(--muted)]')} />
-                      </Field>
+            {activeTab === 'Configuração' && configurationTab === 'legacy-tasks' && (
+              <Card>
+                <SectionTitle
+                  title={`Tasks (${filteredTaskList.length})`}
+                  action={
+                    <div className="flex flex-wrap gap-2">
+                      <LimitSelect value={itemsPerPage.ens} onChange={(e) => setLimit('ens', e.target.value)} />
+                      <Button variant="secondary" onClick={clearTaskFilters}>Clear filters</Button>
                     </div>
-
-                    <div className="mt-5 flex flex-col gap-3 border-t border-[var(--border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-xs text-[var(--muted)]">{canSaveTask ? 'Pronto para salvar.' : 'Preencha descrição e projeto para liberar o cadastro.'}</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Button onClick={saveEn} disabled={!canSaveTask}>{editingEnId ? 'Salvar alterações' : 'Criar tarefa'}</Button>
-                        <Button variant="secondary" onClick={resetEn}>{editingEnId ? 'Cancelar edição' : 'Limpar'}</Button>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-                <Card>
-                  <SectionTitle
-                    eyebrow="Consulta"
-                    title={`Tarefas cadastradas (${filteredTaskList.length})`}
-                    action={
-                      <div className="flex flex-wrap gap-2">
-                        <LimitSelect value={itemsPerPage.ens} onChange={(e) => setLimit('ens', e.target.value)} />
-                        <Button variant="secondary" onClick={clearTaskFilters}>Limpar filtros</Button>
-                      </div>
-                    }
-                  />
+                  }
+                />
                   <div className="mb-5 rounded-[24px] border border-[var(--border)] bg-[var(--surface-muted)] p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-[var(--text)]">Filtros rápidos</p>
-                      <p className="text-xs text-[var(--muted)]">Refine a lista sem alterar a Home</p>
+                      <p className="text-sm font-semibold text-[var(--text)]">Quick filters</p>
+                      <p className="text-xs text-[var(--muted)]">Refine the list without changing Home</p>
                     </div>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <SelectField label="Status" value={taskFilters.status} onChange={(e) => setTaskFilters((current) => ({ ...current, status: e.target.value }))} options={['Todos', ...taskStatuses]} />
                     <SelectField label="Squad" value={taskFilters.squad} onChange={(e) => setTaskFilters((current) => ({ ...current, squad: e.target.value }))} options={squads} />
-                    <SelectField label="Projeto" value={taskFilters.project} onChange={(e) => setTaskFilters((current) => ({ ...current, project: e.target.value }))} options={projects} />
-                    <SelectField label="Responsável QA" value={taskFilters.owner} onChange={(e) => setTaskFilters((current) => ({ ...current, owner: e.target.value }))} options={qas} />
+                    <SelectField label="Project" value={taskFilters.project} onChange={(e) => setTaskFilters((current) => ({ ...current, project: e.target.value }))} options={projects} />
+                    <SelectField label="QA owner" value={taskFilters.owner} onChange={(e) => setTaskFilters((current) => ({ ...current, owner: e.target.value }))} options={qas} />
                     </div>
                   </div>
                   <div className="space-y-3">
-                    {filteredTaskList.slice(0, itemsPerPage.ens).map((item) => <TaskRow key={item.id} task={item} onEdit={() => { setEditingEnId(item.id); setNewEn({ desc: item.desc, status: item.status, type: item.type || 'Testes', squad: item.squad, project: item.project, owner: item.owner }) }} onDelete={() => setPendingDeleteTask(item)} />)}
+                    {filteredTaskList.slice(0, itemsPerPage.ens).map((item) => <TaskRow key={item.id} task={item} onEdit={() => { setTaskError(''); setTaskModalOpen(true); setEditingEnId(item.id); setNewEn({ desc: item.desc, status: item.status, type: item.type || 'Testes', squad: item.squad, project: item.project, owner: item.owner }) }} onDelete={() => setPendingDeleteTask(item)} />)}
                     {!filteredTaskList.length && <EmptyState>Nenhuma tarefa encontrada com os filtros atuais.</EmptyState>}
                   </div>
-                </Card>
-              </>
+              </Card>
             )}
+
+            {activeTab === 'Impactos' && <Impacts tasks={ens} owner={loggedQa.name} />}
+            {activeTab === 'Visão do Projeto' && <ProjectOverview owner={loggedQa.name} params={routeParams} navigate={navigate} legacyProjects={configData.projects} />}
+            {activeTab === 'Cenários' && <Scenarios key={JSON.stringify(routeParams)} owner={loggedQa.name} params={routeParams} navigate={navigate} />}
 
             {activeTab === 'Bugs' && (
               <Card>
@@ -828,23 +897,13 @@ export default function App() {
               </Card>
             )}
 
-            {activeTab === tabs[2] && (
-              <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                <Card>
-                  <SectionTitle
-                    title="Projetos e squads"
-                    action={
-                      <SegmentedControl
-                        value={catalogTab}
-                        onChange={changeCatalogTab}
-                        options={[['projects', 'Projetos'], ['squads', 'Squads']]}
-                      />
-                    }
-                  />
-
+            {activeTab === 'Configuração' && ['projects', 'squads', 'types', 'status'].includes(configurationTab) && (
+              <Card>
+                <div className="grid grid-cols-1 gap-6">
+                {['projects', 'squads'].includes(configurationTab) && <div className="min-w-0">
                   {catalogTab === 'projects' ? (
                     <>
-                      <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
+                      {editingConfig.type === 'project' && <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
                         <input
                           value={configForm.project}
                           onChange={(event) => setConfigForm((current) => ({ ...current, project: event.target.value }))}
@@ -859,10 +918,9 @@ export default function App() {
                           {configData.squads.map((squad) => <option key={squad} value={squad}>{squad}</option>)}
                         </select>
                         <div className="flex gap-2">
-                          <Button onClick={saveProject} disabled={!configData.squads.length}>{editingConfig.type === 'project' ? 'Salvar' : 'Adicionar'}</Button>
                           {editingConfig.type === 'project' && <Button variant="secondary" onClick={resetConfigEditor}>Cancelar</Button>}
                         </div>
-                      </div>
+                      </div>}
 
                       <div className="mt-4 space-y-2">
                         {configData.projects.map((project) => (
@@ -877,6 +935,7 @@ export default function App() {
                                 className="px-3 py-1.5 text-xs"
                                 onClick={() => {
                                   setEditingConfig({ type: 'project', value: project })
+                                  setConfigAddTarget('project')
                                   setConfigForm((current) => ({
                                     ...current,
                                     project,
@@ -895,50 +954,38 @@ export default function App() {
                     </>
                   ) : (
                     <>
-                      <div className="flex flex-col gap-2 sm:flex-row">
+                      {editingConfig.type === 'squad' && <div className="flex flex-col gap-2 sm:flex-row">
                         <input
                           value={configForm.squad}
                           onChange={(event) => setConfigForm((current) => ({ ...current, squad: event.target.value }))}
                           placeholder="Nome da squad"
                           className={inputClass}
                         />
-                        <Button onClick={() => saveConfigItem('squad')}>{editingConfig.type === 'squad' ? 'Salvar' : 'Adicionar'}</Button>
                         {editingConfig.type === 'squad' && <Button variant="secondary" onClick={resetConfigEditor}>Cancelar</Button>}
-                      </div>
+                      </div>}
                       <ConfigList
                         items={configData.squads}
                         onEdit={(item) => {
                           setEditingConfig({ type: 'squad', value: item })
+                          setConfigAddTarget('squad')
                           setConfigForm((current) => ({ ...current, squad: item }))
                         }}
                         onDelete={(item) => deleteConfigItem('squads', item)}
                       />
                     </>
                   )}
-                </Card>
+                </div>}
 
-                <Card>
-                  <SectionTitle
-                    title="Tipos e status"
-                    action={
-                      <SegmentedControl
-                        value={workflowTab}
-                        onChange={changeWorkflowTab}
-                        options={[['status', 'Status'], ['taskType', 'Tipos']]}
-                      />
-                    }
-                  />
-
-                  <div className="flex flex-col gap-2 sm:flex-row">
+                {['types', 'status'].includes(configurationTab) && <div className="min-w-0">
+                  {editingConfig.type === workflowConfig.type && <div className="flex flex-col gap-2 sm:flex-row">
                     <input
                       value={configForm[workflowConfig.type]}
                       onChange={(event) => setConfigForm((current) => ({ ...current, [workflowConfig.type]: event.target.value }))}
                       placeholder={workflowConfig.placeholder}
                       className={inputClass}
                     />
-                    <Button onClick={() => saveConfigItem(workflowConfig.type)}>{editingConfig.type === workflowConfig.type ? 'Salvar' : 'Adicionar'}</Button>
                     {editingConfig.type === workflowConfig.type && <Button variant="secondary" onClick={resetConfigEditor}>Cancelar</Button>}
-                  </div>
+                  </div>}
                   <ConfigList
                     items={configData[workflowConfig.key]}
                     onEdit={(item) => {
@@ -947,16 +994,78 @@ export default function App() {
                         return
                       }
                       setEditingConfig({ type: workflowConfig.type, value: item })
+                      setConfigAddTarget(workflowConfig.type)
                       setConfigForm((current) => ({ ...current, [workflowConfig.type]: item }))
                     }}
                     onDelete={(item) => deleteConfigItem(workflowConfig.key, item)}
                   />
-                </Card>
-              </section>
+                </div>}
+                </div>
+              </Card>
+            )}
+
+            {activeTab === 'Configuração' && configurationTab === 'general' && (
+              <Card>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+                    <p className="font-semibold">{language === 'pt-BR' ? 'Idioma' : 'Language'}</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{language === 'pt-BR' ? 'Escolha o idioma da interface.' : 'Choose the interface language.'}</p>
+                    <label className="mt-4 flex flex-col gap-2 text-sm font-medium text-[var(--text)]">
+                      <span className="text-sm font-semibold text-[var(--muted)]">{language === 'pt-BR' ? 'Idioma da interface' : 'Interface language'}</span>
+                      <select value={language} onChange={(event) => setLanguage(event.target.value)} className={inputClass}>
+                        <option value="pt-BR">Português (Brasil)</option>
+                        <option value="en-US">English (United States)</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+                    <p className="font-semibold">{language === 'pt-BR' ? 'Aparência' : 'Appearance'}</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{language === 'pt-BR' ? 'Altere o tema visual da aplicação.' : 'Change the application theme.'}</p>
+                    <Button className="mt-4" onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? (language === 'pt-BR' ? 'Usar modo claro' : 'Use light mode') : (language === 'pt-BR' ? 'Usar modo noturno' : 'Use dark mode')}</Button>
+                  </div>
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+                    <p className="font-semibold">{language === 'pt-BR' ? 'Barra lateral' : 'Sidebar'}</p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">{language === 'pt-BR' ? 'Escolha entre o menu completo ou compacto.' : 'Choose between the full or compact menu.'}</p>
+                    <Button className="mt-4" onClick={() => setSidebarCollapsed((current) => !current)}>{sidebarCollapsed ? (language === 'pt-BR' ? 'Expandir barra lateral' : 'Expand sidebar') : (language === 'pt-BR' ? 'Recolher barra lateral' : 'Collapse sidebar')}</Button>
+                  </div>
+                </div>
+              </Card>
             )}
           </div>
         </main>
       </div>
+      {taskModalOpen && (
+        <dialog
+          ref={taskDialogRef}
+          aria-labelledby="task-dialog-title"
+          onCancel={(event) => { event.preventDefault(); if (!savingTask) setTaskModalOpen(false) }}
+          className="m-auto max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-[24px] border border-[var(--border)] bg-[var(--modal)] p-6 text-[var(--text)] shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+        >
+          <form onSubmit={(event) => { event.preventDefault(); saveEn() }}>
+            <h3 id="task-dialog-title" className="text-xl font-semibold">{editingEnId ? 'Editar tarefa' : 'Adicionar Tarefa'}</h3>
+            <fieldset disabled={savingTask} className="mt-5 grid min-w-0 grid-cols-1 gap-4 border-0 p-0 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Field label="Descrição Tarefa">
+                  <textarea autoFocus required rows={3} value={newEn.desc} onChange={(event) => setNewEn((current) => ({ ...current, desc: event.target.value }))} placeholder="Ex: Validar fluxo de contratação digital" className={inputClass} />
+                </Field>
+              </div>
+              <SelectField label="Tipo de tarefa" value={newEn.type} onChange={(event) => setNewEn((current) => ({ ...current, type: event.target.value }))} options={configData.taskTypes.length ? configData.taskTypes : taskTypes} />
+              <SelectField label="Projeto" value={newEn.project} onChange={(event) => {
+                const project = event.target.value
+                setNewEn((current) => ({ ...current, project, squad: projectSquads[project] || current.squad }))
+              }} options={projects.filter((item) => item !== 'Todos')} />
+              <SelectField label="Squad" value={newEn.squad} onChange={(event) => setNewEn((current) => ({ ...current, squad: event.target.value }))} options={squads.filter((item) => item !== 'Todos')} />
+              <SelectField label="Responsável QA" value={newEn.owner} onChange={(event) => setNewEn((current) => ({ ...current, owner: event.target.value }))} options={qas.filter((item) => item !== 'Todos')} />
+              {editingEnId && <SelectField label="Status" value={newEn.status} onChange={(event) => setNewEn((current) => ({ ...current, status: event.target.value }))} options={taskStatuses} />}
+            </fieldset>
+            {taskError && <p role="alert" className="mt-4 text-sm text-[var(--red)]">{taskError}</p>}
+            <div className="mt-6 flex justify-end gap-2">
+              <Button variant="secondary" disabled={savingTask} onClick={() => setTaskModalOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={!canSaveTask || savingTask}>{savingTask ? 'Salvando...' : editingEnId ? 'Salvar alterações' : 'Salvar tarefa'}</Button>
+            </div>
+          </form>
+        </dialog>
+      )}
       {pendingDeleteTask && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"

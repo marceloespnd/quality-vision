@@ -43,5 +43,8 @@ await importCollection('ens')
 await importCollection('bugs')
 await importCollection('logs')
 await importCollection('settings')
+await importCollection('projects')
+await importCollection('flows')
+await importCollection('scenarios')
 
 console.log('Seed import finished.')

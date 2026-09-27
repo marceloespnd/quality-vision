@@ -1,7 +1,44 @@
-export const APP_VERSION = 'v1.43.1'
+export const APP_VERSION = 'v1.45.5'
 export const COPYRIGHT = '© veltrix, 2026'
 
-export const tabs = ['Home', 'Cadastro de Tarefas', 'Configurações']
+export const tabs = ['Home', 'Visão do Projeto', 'Cenários', 'Impactos', 'Configuração']
+export const featureLabels = {
+  'pt-BR': {
+    Home: '🏠 Home',
+    'Visão do Projeto': '📊 Visão do Projeto',
+    Cenários: '🧩 Cenários',
+    Impactos: '⚠️ Impactos',
+    Configuração: '⚙️ Configuração',
+  },
+  'en-US': {
+    Home: '🏠 Home',
+    'Visão do Projeto': '📊 Project Overview',
+    Cenários: '🧩 Scenarios',
+    Impactos: '⚠️ Impacts',
+    Configuração: '⚙️ Settings',
+  },
+}
+export const statusLabels = {
+  Finalizado: 'Completed',
+  'Em andamento': 'In progress',
+  Bloqueado: 'Blocked',
+  Impactado: 'Impacted',
+  Pendente: 'Pending',
+  Novo: 'New',
+  'Em análise': 'Under review',
+  Corrigido: 'Fixed',
+  Crítico: 'Critical',
+  Aprovado: 'Passed',
+  Falhado: 'Failed',
+  Excluído: 'Excluded',
+  Aberto: 'Open',
+  'Em tratamento': 'In progress',
+  Resolvido: 'Resolved',
+  Baixa: 'Low',
+  Média: 'Medium',
+  Alta: 'High',
+  Crítica: 'Critical',
+}
 export const baseStatuses = ['Finalizado', 'Em andamento', 'Bloqueado', 'Impactado', 'Pendente']
 export const bugStatuses = ['Novo', 'Em análise', 'Corrigido', 'Crítico']
 export const taskTypes = ['Testes', 'Scripts', 'Automação']
@@ -19,10 +56,10 @@ export const statusStyle = {
 }
 
 export const statusColor = {
-  Finalizado: '#10B981',
-  'Em andamento': '#2563EB',
-  Bloqueado: '#F97316',
-  Impactado: '#F97316',
+  Finalizado: '#2E844A',
+  'Em andamento': '#0176D3',
+  Bloqueado: '#8C4B02',
+  Impactado: '#8C4B02',
   Pendente: '#6B7280',
 }
 

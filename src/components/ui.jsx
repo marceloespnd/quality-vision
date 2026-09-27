@@ -1,4 +1,13 @@
 import { cx } from '../utils'
+import { statusLabels, statusStyle } from '../constants'
+
+function StatusBadge({ status }) {
+  return (
+    <span className={cx('inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ring-1 ring-inset', statusStyle[status] || statusStyle.Pendente)}>
+      {statusLabels[status] || status}
+    </span>
+  )
+}
 
 export function Button({ children, variant = 'primary', className = '', disabled = false, ...props }) {
   const base = 'inline-flex items-center justify-center rounded-2xl px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg)] disabled:cursor-not-allowed disabled:opacity-60'
@@ -16,7 +25,7 @@ export function Button({ children, variant = 'primary', className = '', disabled
 }
 
 export function Card({ children, className = '' }) {
-  return <div className={cx('rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-sm', className)}>{children}</div>
+  return <div className={cx('rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm', className)}>{children}</div>
 }
 
 export function Field({ label, children }) {
@@ -35,7 +44,7 @@ export function SelectField({ label, value, onChange, options }) {
         {options.map((option) => {
           const labelText = typeof option === 'string' ? option : option.label
           const valueText = typeof option === 'string' ? option : option.value
-          return <option key={valueText} value={valueText}>{labelText}</option>
+          return <option key={valueText} value={valueText}>{statusLabels[labelText] || labelText}</option>
         })}
       </select>
     </Field>
@@ -44,24 +53,26 @@ export function SelectField({ label, value, onChange, options }) {
 
 export function SectionTitle({ title, eyebrow, action }) {
   return (
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
       <div>
         {eyebrow && <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">{eyebrow}</p>}
-        <h3 className="text-xl font-semibold tracking-tight text-[var(--text)]">{title}</h3>
+        {title && <h3 className="text-xl font-semibold tracking-tight text-[var(--text)]">{title}</h3>}
       </div>
       {action}
     </div>
   )
 }
 
-export function StatCard({ title, value, sub, onClick }) {
-  return (
-    <button type="button" onClick={onClick} className={cx('rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:bg-[var(--hover)]', onClick && 'cursor-pointer')}>
-      <p className="text-sm font-semibold text-[var(--muted)]">{title}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-[var(--text)]">{value}</p>
+export function StatCard({ title, value, sub, onClick, compact = false, className = '' }) {
+  const content = <>
+      <p className={cx('font-semibold text-[var(--muted)]', compact ? 'text-xs' : 'text-sm')}>{title}</p>
+      <p className={cx('font-semibold tracking-tight text-[var(--text)]', compact ? 'mt-1 text-2xl' : 'mt-2 text-3xl')}>{value}</p>
       {sub && <p className="mt-2 text-xs text-[var(--muted)]">{sub}</p>}
-    </button>
-  )
+    </>
+  const baseClassName = cx('rounded-[24px] border border-[var(--border)] bg-[var(--surface)] text-left shadow-sm transition hover:bg-[var(--hover)]', compact ? 'p-3' : 'p-4', className)
+  return onClick
+    ? <button type="button" onClick={onClick} className={cx(baseClassName, 'cursor-pointer hover:-translate-y-0.5')}>{content}</button>
+    : <div className={baseClassName}>{content}</div>
 }
 
 export const inputClass = 'w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2.5 text-sm text-[var(--text)] outline-none ring-0 transition focus:border-[var(--accent)]'
@@ -85,13 +96,13 @@ export function LimitSelect({ value, onChange }) {
 
 export function RecordCard({ title, status, meta, onEdit, onDelete }) {
   return (
-    <div className="rounded-[22px] border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+    <div className="min-w-0 overflow-hidden rounded-[22px] border border-[var(--border)] bg-[var(--surface-muted)] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-[var(--text)]">{title}</p>
-          <p className="mt-2 text-xs text-[var(--muted)]">{meta}</p>
+          <p className="break-words text-sm font-semibold text-[var(--text)]">{title}</p>
+          <p className="mt-2 break-words text-xs text-[var(--muted)]">{meta}</p>
         </div>
-        <div className="shrink-0 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">{status}</div>
+        <StatusBadge status={status} />
       </div>
       {(onEdit || onDelete) && (
         <div className="mt-3 flex gap-2">
@@ -127,7 +138,7 @@ export function TaskRow({ task, onEdit, onDelete }) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-semibold text-[var(--text)]">{task.desc}</p>
-            <span className="rounded-full bg-[var(--accent-muted)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">{task.status}</span>
+            <StatusBadge status={task.status} />
           </div>
           <p className="mt-2 text-xs text-[var(--muted)]">{task.id} • {task.type || 'Testes'} • {task.project} • {task.squad} • QA: {task.owner}</p>
         </div>

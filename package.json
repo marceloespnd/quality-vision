@@ -6,16 +6,18 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "node --test src/domain/*.test.js",
     "preview": "vite preview",
     "seed": "node firebase/importSeed.mjs"
   },
   "dependencies": {
     "chart.js": "^4.4.7",
+    "dotenv": "^16.6.1",
     "firebase": "^11.1.0",
     "react": "^18.3.1",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^18.3.1",
-    "dotenv": "^16.6.1"
+    "update": "^0.7.4"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",

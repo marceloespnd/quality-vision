@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta name="theme-color" content="#2563EB" />
+    <meta name="theme-color" content="#0B3552" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -23,68 +23,76 @@
     </script>
       <style>
         :root {
-          --bg: #F3F4F6;
+          --bg: #EEF6FB;
           --sidebar: #FFFFFF;
           --surface: #FFFFFF;
-          --surface-muted: #E8EAED;
+          --surface-muted: #E8F4FB;
           --modal: #FFFFFF;
-          --hover: #E5E7EB;
-          --logo-bg: #08090B;
-          --logo-hover: #111827;
+          --hover: #D8EFFB;
+          --logo-bg: #0B3552;
+          --logo-hover: #124B70;
           --logo-blend: normal;
-          --border: #D1D5DB;
-          --text: #16181D;
-          --muted: #626874;
-          --accent: #2563EB;
-          --accent-hover: #1D4ED8;
+          --logo-filter: brightness(1.08) saturate(1.12);
+          --border: #B9D4E5;
+          --text: #082B45;
+          --muted: #54748E;
+          --accent: #0788D9;
+          --accent-hover: #056AA9;
           --accent-text: #FFFFFF;
-          --accent-muted: #DBEAFE;
-          --blue: #2563EB;
-          --blue-soft: #DBEAFE;
-          --green: #10B981;
-          --green-soft: #D1FAE5;
-          --red: #EF4444;
-          --red-soft: #FEE2E2;
-          --orange: #F97316;
-          --orange-soft: #FFEDD5;
-          --purple: #8B5CF6;
-          --purple-soft: #EDE9FE;
+          --accent-muted: #D8EFFB;
+          --blue: #0788D9;
+          --blue-soft: #D8EFFB;
+          --green: #2E844A;
+          --green-soft: #EBF7E6;
+          --red: #BA0517;
+          --red-soft: #FEF1EE;
+          --orange: #8C4B02;
+          --orange-soft: #FFF3E0;
+          --purple: #2E9BD3;
+          --purple-soft: #E1F3FB;
           --gray: #6B7280;
           --gray-soft: #E5E7EB;
           color-scheme: light;
         }
         :root[data-theme='dark'] {
-          --bg: #0F172A;
-          --sidebar: #111827;
-          --surface: #1E293B;
-          --surface-muted: #273449;
-          --modal: #273449;
-          --hover: #334155;
-          --logo-bg: #111827;
-          --logo-hover: #334155;
-          --logo-blend: screen;
-          --border: #334155;
-          --text: #F8FAFC;
-          --muted: #CBD5E1;
-          --accent: #3B82F6;
-          --accent-hover: #60A5FA;
-          --accent-text: #FFFFFF;
-          --accent-muted: #1E3A8A;
-          --blue: #3B82F6;
-          --blue-soft: rgba(59,130,246,0.16);
+          --bg: #061A2B;
+          --sidebar: #092B43;
+          --surface: #0D3856;
+          --surface-muted: #124563;
+          --modal: #124563;
+          --hover: #185879;
+          --logo-bg: #061A2B;
+          --logo-hover: #0D3856;
+          --logo-blend: normal;
+          --logo-filter: brightness(0.9) saturate(1.2);
+          --border: #286181;
+          --text: #F2FBFF;
+          --muted: #A9CFE4;
+          --accent: #0788D9;
+          --accent-hover: #65C8F2;
+          --accent-text: #031A2B;
+          --accent-muted: #104D70;
+          --blue: #65C8F2;
+          --blue-soft: rgba(101,200,242,0.16);
           --green: #34D399;
           --green-soft: rgba(52,211,153,0.14);
           --red: #F87171;
           --red-soft: rgba(248,113,113,0.14);
           --orange: #FB923C;
           --orange-soft: rgba(251,146,60,0.16);
-          --purple: #A78BFA;
-          --purple-soft: rgba(167,139,250,0.16);
+          --purple: #65C8F2;
+          --purple-soft: rgba(101,200,242,0.16);
           --gray: #9CA3AF;
           --gray-soft: rgba(156,163,175,0.16);
           color-scheme: dark;
         }
-        .quality-vision-logo { mix-blend-mode: var(--logo-blend); }
+        progress { accent-color: var(--accent); }
+        input[type='checkbox'] { accent-color: var(--accent); }
+        button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+        .brand-wordmark { color: #FFFFFF; }
+        .brand-monogram { background: rgba(255,255,255,.15); color: #FFFFFF; }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+        .quality-vision-logo { filter: var(--logo-filter); mix-blend-mode: var(--logo-blend); }
         html, body, #root { min-height: 100%; background: var(--bg); }
         html, body { transition: background-color .2s ease, color .2s ease; }
       </style>
