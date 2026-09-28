@@ -1,21 +1,23 @@
-export const APP_VERSION = 'v1.45.5'
+export const APP_VERSION = 'v1.46.0'
 export const COPYRIGHT = '© veltrix, 2026'
 
-export const tabs = ['Home', 'Visão do Projeto', 'Cenários', 'Impactos', 'Configuração']
+export const tabs = ['Home', 'Visão do Projeto', 'Cenários', 'Impactos', 'Bugs', 'Configuração']
 export const featureLabels = {
   'pt-BR': {
-    Home: '🏠 Home',
-    'Visão do Projeto': '📊 Visão do Projeto',
-    Cenários: '🧩 Cenários',
-    Impactos: '⚠️ Impactos',
-    Configuração: '⚙️ Configuração',
+    Home: 'Início',
+    'Visão do Projeto': 'Visão do Projeto',
+    Cenários: 'Cenários',
+    Impactos: 'Impedimentos',
+    Bugs: 'Bugs',
+    Configuração: 'Configuração',
   },
   'en-US': {
-    Home: '🏠 Home',
-    'Visão do Projeto': '📊 Project Overview',
-    Cenários: '🧩 Scenarios',
-    Impactos: '⚠️ Impacts',
-    Configuração: '⚙️ Settings',
+    Home: 'Home',
+    'Visão do Projeto': 'Project Overview',
+    Cenários: 'Scenarios',
+    Impactos: 'Impediments',
+    Bugs: 'Bugs',
+    Configuração: 'Settings',
   },
 }
 export const statusLabels = {

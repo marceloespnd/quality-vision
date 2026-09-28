@@ -44,13 +44,14 @@ service cloud.firestore {
 
       allow create: if isEditor()
         && request.resource.data.keys().hasOnly([
-          'desc', 'status', 'squad', 'project', 'owner',
+          'desc', 'type', 'status', 'squad', 'project', 'projectId', 'owner',
           'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
         ])
         && isShortText(request.resource.data.desc, 5, 300)
         && validEnStatus(request.resource.data.status)
         && isShortText(request.resource.data.squad, 2, 80)
-        && isShortText(request.resource.data.project, 2, 120)
+        && isShortText(request.resource.data.projectId, 1, 150)
+        && exists(/databases/$(database)/documents/projects/$(request.resource.data.projectId))
         && isShortText(request.resource.data.owner, 2, 80)
         && request.resource.data.createdAt is timestamp
         && request.resource.data.updatedAt is timestamp
@@ -59,7 +60,7 @@ service cloud.firestore {
 
       allow update: if isEditor()
         && request.resource.data.keys().hasOnly([
-          'desc', 'status', 'squad', 'project', 'owner', 'week', 'bug',
+          'desc', 'type', 'status', 'squad', 'project', 'projectId', 'owner', 'week', 'bug',
           'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
         ])
         && resource.data.createdAt == request.resource.data.createdAt
@@ -67,7 +68,8 @@ service cloud.firestore {
         && isShortText(request.resource.data.desc, 5, 300)
         && validEnStatus(request.resource.data.status)
         && isShortText(request.resource.data.squad, 2, 80)
-        && isShortText(request.resource.data.project, 2, 120)
+        && isShortText(request.resource.data.projectId, 1, 150)
+        && exists(/databases/$(database)/documents/projects/$(request.resource.data.projectId))
         && isShortText(request.resource.data.owner, 2, 80)
         && request.resource.data.updatedAt is timestamp
         && isShortText(request.resource.data.updatedBy, 2, 120);
@@ -75,41 +77,37 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    function validOccurrenceScenario(data, index) {
+      return data.scenarioIds.size() <= index || (
+        data.scenarioIds[index] is string
+        && exists(/databases/$(database)/documents/scenarios/$(data.scenarioIds[index]))
+        && get(/databases/$(database)/documents/scenarios/$(data.scenarioIds[index])).data.projectId == data.projectId
+        && (data.flowId == '' || get(/databases/$(database)/documents/scenarios/$(data.scenarioIds[index])).data.flowId == data.flowId)
+      );
+    }
+    function validOccurrence(data, bug) {
+      return data.keys().hasOnly(['desc','owner','developer','squad','severity','status','taskId','scenarioId','scenarioIds','projectId','flowId','blocksExecution','action','startedAt','resolvedAt','createdAt','updatedAt','createdBy','updatedBy'])
+        && isShortText(data.desc, 1, 1000) && isShortText(data.owner, 1, 80)
+        && data.severity in ['Baixa','Média','Alta','Crítica']
+        && (bug ? data.status in ['Novo','Em análise','Em correção','Pronto para reteste','Fechado'] : data.status in ['Aberto','Em tratamento','Resolvido'])
+        && data.blocksExecution is bool
+        && isShortText(data.projectId, 1, 1500)
+        && exists(/databases/$(database)/documents/projects/$(data.projectId))
+        && isShortText(data.flowId, 0, 1500)
+        && (data.flowId == '' || (exists(/databases/$(database)/documents/flows/$(data.flowId)) && get(/databases/$(database)/documents/flows/$(data.flowId)).data.projectId == data.projectId))
+        && data.scenarioIds is list && data.scenarioIds.size() <= 8
+        && validOccurrenceScenario(data, 0) && validOccurrenceScenario(data, 1)
+        && validOccurrenceScenario(data, 2) && validOccurrenceScenario(data, 3)
+        && validOccurrenceScenario(data, 4) && validOccurrenceScenario(data, 5)
+        && validOccurrenceScenario(data, 6) && validOccurrenceScenario(data, 7)
+        && isShortText(data.action, 0, 2000)
+        && isShortText(data.startedAt, 1, 40) && isShortText(data.resolvedAt, 0, 40)
+        && validAudit(data);
+    }
     match /bugs/{bugId} {
       allow read: if isReader();
-
-      allow create: if isEditor()
-        && request.resource.data.keys().hasOnly([
-          'desc', 'status', 'owner', 'developer', 'squad', 'createdAt', 'updatedAt',
-          'createdBy', 'updatedBy'
-        ])
-        && isShortText(request.resource.data.desc, 5, 300)
-        && validBugStatus(request.resource.data.status)
-        && isShortText(request.resource.data.owner, 2, 80)
-        && (!request.resource.data.keys().hasAny(['developer'])
-          || isShortText(request.resource.data.developer, 0, 80))
-        && isShortText(request.resource.data.squad, 2, 80)
-        && request.resource.data.createdAt is timestamp
-        && request.resource.data.updatedAt is timestamp
-        && isShortText(request.resource.data.createdBy, 2, 120)
-        && isShortText(request.resource.data.updatedBy, 2, 120);
-
-      allow update: if isEditor()
-        && request.resource.data.keys().hasOnly([
-          'desc', 'status', 'owner', 'developer', 'squad', 'createdAt', 'updatedAt',
-          'createdBy', 'updatedBy'
-        ])
-        && resource.data.createdAt == request.resource.data.createdAt
-        && resource.data.createdBy == request.resource.data.createdBy
-        && isShortText(request.resource.data.desc, 5, 300)
-        && validBugStatus(request.resource.data.status)
-        && isShortText(request.resource.data.owner, 2, 80)
-        && (!request.resource.data.keys().hasAny(['developer'])
-          || isShortText(request.resource.data.developer, 0, 80))
-        && isShortText(request.resource.data.squad, 2, 80)
-        && request.resource.data.updatedAt is timestamp
-        && isShortText(request.resource.data.updatedBy, 2, 120);
-
+      allow create: if isEditor() && validOccurrence(request.resource.data, true);
+      allow update: if isEditor() && validOccurrence(request.resource.data, true) && unchangedCreation();
       allow delete: if isAdmin();
     }
 
@@ -124,8 +122,9 @@ service cloud.firestore {
     match /projects/{projectId} {
       function validProject() {
         let data = request.resource.data;
-        return data.keys().hasOnly(['name', 'owner', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'])
-          && isShortText(data.name, 1, 120) && isShortText(data.owner, 1, 80) && validAudit(data);
+        return data.keys().hasOnly(['name', 'owner', 'squad', 'createdAt', 'updatedAt', 'createdBy', 'updatedBy'])
+          && isShortText(data.name, 1, 120) && isShortText(data.owner, 1, 80)
+          && (!data.keys().hasAny(['squad']) || isShortText(data.squad, 0, 80)) && validAudit(data);
       }
       allow read: if isReader();
       allow create: if isEditor() && validProject();
@@ -153,7 +152,7 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/projects/$(data.projectId))
           && exists(/databases/$(database)/documents/flows/$(data.flowId))
           && get(/databases/$(database)/documents/flows/$(data.flowId)).data.projectId == data.projectId
-          && data.status in ['Pendente', 'Aprovado', 'Falhado', 'Excluído']
+          && data.status in ['Pendente', 'Aprovado', 'Falhado', 'Excluído', 'Bloqueado']
           && isShortText(data.scriptFile, 0, 300) && isShortText(data.notes, 0, 2000)
           && isShortText(data.exclusionReason, 0, 1000)
           && (data.status != 'Excluído' || data.exclusionReason.size() > 0)
@@ -167,31 +166,9 @@ service cloud.firestore {
     }
 
     match /impacts/{impactId} {
-      function validImpact() {
-        let data = request.resource.data;
-        return data.keys().hasOnly([
-          'desc', 'owner', 'severity', 'status', 'taskId', 'scenarioId', 'action',
-          'createdAt', 'updatedAt', 'createdBy', 'updatedBy'
-        ])
-          && isShortText(data.desc, 1, 1000)
-          && isShortText(data.owner, 1, 80)
-          && data.severity in ['Baixa', 'Média', 'Alta', 'Crítica']
-          && data.status in ['Aberto', 'Em tratamento', 'Resolvido']
-          && isShortText(data.taskId, 0, 1500)
-          && (!data.keys().hasAny(['scenarioId']) || (isShortText(data.scenarioId, 0, 1500)
-            && (data.scenarioId == '' || exists(/databases/$(database)/documents/scenarios/$(data.scenarioId)))))
-          && isShortText(data.action, 0, 2000)
-          && data.createdAt is timestamp
-          && data.updatedAt is timestamp
-          && isShortText(data.createdBy, 1, 120)
-          && isShortText(data.updatedBy, 1, 120);
-      }
-
       allow read: if isReader();
-      allow create: if isEditor() && validImpact();
-      allow update: if isEditor() && validImpact()
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.createdBy == resource.data.createdBy;
+      allow create: if isEditor() && validOccurrence(request.resource.data, false);
+      allow update: if isEditor() && validOccurrence(request.resource.data, false) && unchangedCreation();
       allow delete: if isAdmin();
     }
 

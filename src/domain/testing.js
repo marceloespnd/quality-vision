@@ -1,16 +1,16 @@
-export const scenarioStatuses = ['Pendente', 'Aprovado', 'Falhado', 'Excluído']
+export const scenarioStatuses = ['Pendente', 'Aprovado', 'Falhado', 'Excluído', 'Bloqueado']
 export function normalizeStatus(value) {
   const aliases = { SUCCESS: 'Aprovado', PASSED: 'Aprovado', FAILED: 'Falhado', FAIL: 'Falhado', EXCLUDE: 'Excluído', PENDENTE: 'Pendente', PENDENTS: 'Pendente' }
   return scenarioStatuses.includes(value) ? value : aliases[value] || 'Pendente'
 }
 export function summarize(scenarios) {
-  const counts = { total: scenarios.length, approved: 0, failed: 0, excluded: 0, pending: 0 }
-  const keys = { Aprovado: 'approved', Falhado: 'failed', Excluído: 'excluded', Pendente: 'pending' }
+  const counts = { total: scenarios.length, approved: 0, failed: 0, excluded: 0, pending: 0, blocked: 0 }
+  const keys = { Aprovado: 'approved', Falhado: 'failed', Excluído: 'excluded', Pendente: 'pending', Bloqueado: 'blocked' }
   scenarios.forEach((item) => counts[keys[normalizeStatus(item.status)]]++)
   const valid = counts.total - counts.excluded
   const executed = counts.approved + counts.failed
   return { ...counts, valid, executed, progress: valid ? executed / valid * 100 : null, approval: valid ? counts.approved / valid * 100 : null,
-    situation: !counts.total ? 'Sem cenários' : !valid ? 'Sem escopo executável' : counts.pending ? executed ? 'Em andamento' : 'Não iniciado' : counts.failed ? 'Execução concluída com falhas' : 'Aprovado' }
+    situation: !counts.total ? 'Sem cenários' : !valid ? 'Sem escopo executável' : counts.blocked ? 'Bloqueado' : counts.pending ? executed ? 'Em andamento' : 'Não iniciado' : counts.failed ? 'Execução concluída com falhas' : 'Aprovado' }
 }
 export function validBinding(scenario, projects, flows) {
   return projects.some((p) => p.id === scenario.projectId) && flows.some((f) => f.id === scenario.flowId && f.projectId === scenario.projectId)

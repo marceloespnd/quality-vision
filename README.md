@@ -133,3 +133,12 @@ O parâmetro `unassigned=1` mostra cenários sem associação válida.
 Validação: `npm test` cobre cálculos, escopo vazio, exclusões, normalização de
 legados e vínculos incompatíveis. `npm run build` valida a compilação da interface.
 As regras devem ser verificadas no emulador/ambiente Firebase antes da publicação.
+
+## Idiomas da interface
+
+O seletor em Configuração → Geral controla pt-BR/en-US por contexto React. O
+catálogo está em `src/i18n/messages.js`; use `useTranslation()` para textos da
+interface. Traduza os rótulos na renderização, mantendo IDs, valores dos filtros,
+status persistidos e textos cadastrados pelo usuário intactos. A preferência fica
+em `quality-vision-language`; valores inválidos usam pt-BR. Os testes de tradução
+estão incluídos em `npm test`.
