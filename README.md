@@ -1,4 +1,4 @@
-# api-quality-vision v1.43.1
+# api-quality-vision v1.48.0
 
 Aplicação React + Vite para acompanhamento de indicadores de qualidade, evolução de ENs, histórico de bugs e configurações operacionais.
 
@@ -142,3 +142,64 @@ interface. Traduza os rótulos na renderização, mantendo IDs, valores dos filt
 status persistidos e textos cadastrados pelo usuário intactos. A preferência fica
 em `quality-vision-language`; valores inválidos usam pt-BR. Os testes de tradução
 estão incluídos em `npm test`.
+
+## Docker
+
+Com Docker Desktop em execução, inicie a versão compilada:
+
+```bash
+docker compose up -d --build app
+```
+
+Acesse http://localhost:8080. O build executa os testes e compila o Vite;
+Nginx serve os arquivos e permite recarregar diretamente rotas como `/projetos`
+e `/cenarios`. Confira o estado com `docker compose ps` e os logs com
+`docker compose logs -f app`.
+
+Para desenvolver com atualização automática ao editar os arquivos:
+
+```bash
+docker compose up --build dev
+```
+
+Acesse http://localhost:5174. O código é montado no container; as dependências
+Linux ficam em um volume separado de `node_modules` do macOS. Após alterar
+`package-lock.json`, atualize esse volume com
+`docker compose run --rm dev npm ci` e reinicie o serviço.
+
+Para parar os containers:
+
+```bash
+docker compose --profile dev down
+```
+
+Opcionalmente, copie `.env.example` para `.env` para mudar as portas ou preencher
+as seis variáveis Firebase. Na versão compilada, elas são incorporadas ao frontend
+durante o build: execute novamente `docker compose up -d --build app` após alterá-las.
+As variáveis `VITE_*` são públicas no navegador; use apenas a configuração cliente
+do Firebase, nunca credenciais administrativas.
+
+Sem Firebase, os dados continuam no armazenamento do navegador, separados por
+origem (protocolo, endereço e porta). Projetos criados em `127.0.0.1:5173` não
+aparecem automaticamente em `localhost:8080`; use Configuração → Geral →
+Carregar projetos de demonstração para testar o card nessa origem.
+
+As portas são publicadas apenas na máquina local. O serviço `app` inclui uma
+verificação de saúde em `/health`. O Dockerfile usa estágios separados para
+compilação e execução, conforme a [documentação do Docker](https://docs.docker.com/build/building/multi-stage/).
+
+## Acesso ao Firebase
+
+Quando as variáveis Firebase estão preenchidas, a aplicação exige login antes de
+abrir os projetos. Ative Google ou E-mail/senha em Authentication → Sign-in method.
+Para testes locais, cadastre `localhost` e `127.0.0.1` nos domínios autorizados.
+Crie o banco Cloud Firestore e publique as regras e índices deste repositório.
+
+As regras exigem custom claims no usuário: `role` pode ser `viewer`, `editor`,
+`qa_editor`, `qa_admin` ou `admin`; `admin: true` também concede acesso. Um administrador
+deve atribuí-las em um ambiente confiável com Firebase Admin SDK. Usuários sem perfil
+veem seu UID e podem atualizar o acesso após a atribuição. O frontend não concede
+permissões nem abre as regras do banco.
+
+Os dados locais existentes são preservados no navegador. Eles não são enviados
+automaticamente ao Firebase quando o modo remoto é ativado.

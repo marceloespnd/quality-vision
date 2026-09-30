@@ -2,7 +2,7 @@ import useScenarioExecution from '../hooks/useScenarioExecution'
 import { useTranslation } from '../i18n'
 import useRecords from '../hooks/useRecords'
 import { projectSummary, validBinding } from '../domain/testing'
-import { Button, Card, EmptyState, SelectField, StatCard, StatusBadge } from './ui'
+import { SummaryStrip, Button, Card, EmptyState, SelectField, StatCard, StatusBadge } from './ui'
 
 function FlowSection({ summary, project, navigate }) {
   const { t } = useTranslation()
@@ -10,7 +10,7 @@ function FlowSection({ summary, project, navigate }) {
   const visible = summary.flows
   const statusLink = (flow, key, label) => <button type="button" className="font-semibold underline decoration-[var(--border)] underline-offset-2 hover:text-[var(--accent)]" aria-label={t(`${flow.name}: ${flow.summary[key]} ${t(label)}`)} onClick={() => navigate('Cenários', { projectId: project.id, flowId: flow.id, status: label })}>{flow.summary[key]}</button>
 
-  return <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--border)]">
+  return <><div className="ds-desktop-table mt-3 overflow-x-auto rounded-xl border border-[var(--border)]">
       <table className="ds-table w-full min-w-[760px] border-collapse text-left text-sm" aria-label={t(`Fluxos do projeto ${project.name}`)}>
         <caption className="sr-only">{t("Indicadores de cenários por fluxo do projeto")} {project.name}</caption>
         <thead className="bg-[var(--sidebar)] text-xs uppercase tracking-wide text-white">
@@ -42,6 +42,9 @@ function FlowSection({ summary, project, navigate }) {
       </table>
       {!visible.length && <EmptyState>{t(summary.flows.length ? 'No flows match the current filters.' : 'This project has no flows yet.')}</EmptyState>}
     </div>
+    <div className="ds-mobile-cards mt-4">{visible.map(flow => <article key={flow.id} className="rounded-xl border border-[var(--border)] p-4"><h3>{flow.name}</h3><p className="text-sm text-[var(--muted)]">{t('Owner')}: {flow.owner}</p><SummaryStrip summary={flow.summary} /><Button variant="secondary" onClick={() => navigate('Cenários', {projectId:project.id,flowId:flow.id})}>{t('View scenarios')}</Button></article>)}</div>
+    {!visible.length && <div className="mt-4"><Button onClick={() => navigate('Configuração', {section:'flows'})}>{t('Create flow')}</Button></div>}
+    </>
 }
 
 export default function ProjectOverview({ params, navigate }) {
@@ -66,15 +69,8 @@ export default function ProjectOverview({ params, navigate }) {
       </div>
       {loading ? <p role="status" className="mt-3">{t("Loading project…")}</p> : !loadError && <>
       {unassigned > 0 && <div className="mt-3 rounded-xl border border-[var(--orange)] bg-[var(--orange-soft)] p-3"><p>{unassigned}{t(" scenario(s) need a valid project and flow link. They are excluded from metrics.")}</p><Button variant="secondary" className="mt-2" onClick={() => navigate('Cenários', { unassigned: '1' })}>{t("Link existing scenarios")}</Button></div>}
-      {!project ? <EmptyState>{params.projectId ? 'Project not found. Select another project.' : 'Select a project to track tests.'}</EmptyState> : <>
-        <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-6">{[
-          ['Total', 'total', 'bg-[var(--surface-muted)]'],
-          ['Passed', 'approved', 'bg-[var(--green-soft)]'],
-          ['Failed', 'failed', 'bg-[var(--red-soft)]'],
-          ['Excluded', 'excluded', 'bg-[var(--gray-soft)]'],
-          ['Pending', 'pending', 'bg-[var(--orange-soft)]'],
-          ['Blocked', 'blocked', 'bg-[var(--red-soft)]'],
-        ].map(([label, key, className]) => <StatCard compact key={key} title={label} value={summary[key]} className={className} />)}</div>
+      {!project ? <EmptyState action={!projects.records.length && <Button onClick={() => navigate('Configuração', {section:'projects'})}>{t('Create project')}</Button>}>{params.projectId ? 'Project not found. Select another project.' : 'Select a project to track tests.'}</EmptyState> : <>
+        <SummaryStrip summary={summary} />
         <FlowSection summary={summary} project={project} navigate={navigate} />
       </>}
     </>}

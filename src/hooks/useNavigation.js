@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-const paths = { Home: '/', 'Visão do Projeto': '/projetos', 'Cenários': '/cenarios', Impactos: '/impedimentos', Bugs: '/bugs', Configuração: '/configuracoes' }
+export const paths = { Home: '/', 'Visão do Projeto': '/projetos', 'Cenários': '/cenarios', Impactos: '/impedimentos', Bugs: '/bugs', Configuração: '/configuracoes' }
 function read() {
   if (window.location.pathname === '/impactos') return {tab:'Impactos', params:Object.fromEntries(new URLSearchParams(window.location.search))}
   const tab = window.location.pathname === '/tarefas'

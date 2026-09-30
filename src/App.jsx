@@ -1,4 +1,6 @@
 import BrandLogo from './components/BrandLogo'
+import HomeProjects from './components/HomeProjects'
+import { createDemoProjects } from './data/demoProjects'
 import { isExistingConfigEdit, saveConfigValue } from './domain/configuration'
 import { projectNameKey, resolveTaskProject, migrateLocalProjects } from './domain/projects'
 import { saveRecord } from './domain/records'
@@ -28,10 +30,10 @@ import { occurrenceActive } from './domain/occurrences'
 import Scenarios from './components/Scenarios'
 import ProjectOverview from './components/ProjectOverview'
 import FlowCatalog from './components/FlowCatalog'
-import useNavigation from './hooks/useNavigation'
+import useNavigation, { paths } from './hooks/useNavigation'
 import { APP_VERSION, COPYRIGHT, baseStatuses, bugStatuses, featureLabels, statusColor, tabs, taskTypes } from './constants'
 import { cx, normalizeDate, uniq } from './utils'
-import { Button, Card, ConfigList, EmptyState, Field, inputClass, LimitSelect, LogSection, RecordCard, SectionTitle, SelectField, StatCard, TaskRow } from './components/ui'
+import { ConfirmDialog, Button, Card, ConfigList, EmptyState, Field, inputClass, LimitSelect, LogSection, RecordCard, SectionTitle, SelectField, StatCard, TaskRow } from './components/ui'
 import useRecords, { saveLocalRecords } from './hooks/useRecords'
 let projectMigrationError = ''
 if (!hasFirebaseConfig) {
@@ -156,6 +158,7 @@ export default function App() {
   const [feedback, setFeedback] = useState(projectMigrationError)
   const [feedbackTone, setFeedbackTone] = useState('success')
   const [pendingDeleteTask, setPendingDeleteTask] = useState(null)
+  const [pendingConfigDelete, setPendingConfigDelete] = useState(null)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
   const [savingTask, setSavingTask] = useState(false)
   const [taskError, setTaskError] = useState('')
@@ -183,6 +186,8 @@ export default function App() {
   const [settingsData, setConfigData] = useState(loadConfigData)
   const configData = { ...settingsData, projects: projectCatalog.records.map(p => p.name), projectSquads: Object.fromEntries(projectCatalog.records.map(p => [p.name, p.squad || ''])) }
   const [resetError, setResetError] = useState('')
+  const [loadingDemo, setLoadingDemo] = useState(false)
+  const demoLock = useRef(false)
   const hasResetBackup = Boolean(localStorage.getItem(backupKey))
   const clearLocalApplication = () => {
     try {
@@ -200,7 +205,15 @@ export default function App() {
   const [catalogTab, setCatalogTab] = useState('projects')
   const [workflowTab, setWorkflowTab] = useState('status')
   const [configAddTarget, setConfigAddTarget] = useState('project')
-  const [configurationTab, setConfigurationTab] = useState(() => routeParams.view === 'registrations' ? 'flows' : 'general')
+  const [configurationTab, setConfigurationTab] = useState(() => routeParams.section || (routeParams.view === 'registrations' ? 'flows' : 'general'))
+  useEffect(() => {
+    const section = routeParams.section
+    if (!['general', 'projects', 'flows', 'squads', 'types', 'status'].includes(section)) return
+    setConfigurationTab(section)
+    setEditingConfig({type:'', value:''})
+    if (['projects','squads'].includes(section)) { setCatalogTab(section); setConfigAddTarget(section === 'projects' ? 'project' : 'squad') }
+    if (['types','status'].includes(section)) { setWorkflowTab(section === 'types' ? 'taskType' : 'status'); setConfigAddTarget(section === 'types' ? 'taskType' : 'status') }
+  }, [routeParams.section])
   const [flowAddRequest, setFlowAddRequest] = useState(0)
 
   const showFeedback = (message, tone = 'success') => {
@@ -547,6 +560,7 @@ export default function App() {
   const selectConfigurationTab = (tab) => {
     resetConfigEditor()
     setConfigurationTab(tab)
+    navigate('Configuração', {section:tab})
     if (['projects', 'squads'].includes(tab)) {
       setCatalogTab(tab)
       setConfigAddTarget(tab === 'projects' ? 'project' : 'squad')
@@ -583,77 +597,62 @@ export default function App() {
   return (
     <LanguageContext.Provider value={language}>
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors">
+      <a className="ds-skip" href="#main-content">{t("Skip to content")}</a>
       <div className="flex min-h-screen">
         <aside className={cx('hidden shrink-0 p-4 transition-all duration-300 xl:block', sidebarCollapsed ? 'w-[112px]' : 'w-[304px]')}>
-          <div className={cx('sticky top-4 flex h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] flex-col rounded-2xl bg-[var(--sidebar)] text-[var(--text)] shadow-2xl transition-all duration-300', sidebarCollapsed ? 'p-3' : 'p-4')}>
+          <div className={cx('ds-sidebar sticky top-4 flex h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)] flex-col rounded-2xl bg-[var(--sidebar)] text-[var(--text)] shadow-2xl transition-all duration-300', sidebarCollapsed ? 'is-collapsed p-3' : 'p-4')}>
             <button
+              type="button"
               onClick={() => setActiveTab(tabs[0])}
               aria-label={t("Quality Vision — início")}
               className={cx(
-                'isolate flex shrink-0 items-center justify-center overflow-hidden rounded-[50%] border border-[var(--border)] bg-[var(--logo-bg)] transition hover:bg-[var(--logo-hover)]',
-                sidebarCollapsed ? 'min-h-12 px-2 py-3' : 'min-h-32 px-10 py-6'
+                'isolate flex w-full shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] shadow-sm transition-colors hover:bg-[var(--hover)]',
+                sidebarCollapsed ? 'min-h-12 px-2 py-3' : 'min-h-24 px-6 py-4'
               )}
             >
               <BrandLogo theme={theme} compact={sidebarCollapsed} />
             </button>
 
-            <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,.18)_transparent]">
-              <nav id="sidebar-navigation" className="space-y-2">
-                {tabs.map((item, index) => (
-                  <button
-                    key={item}
-                    onClick={() => setActiveTab(item)}
-                    className={cx(
-                      'w-full rounded-2xl text-sm font-semibold transition',
-                      sidebarCollapsed ? 'flex h-12 items-center justify-center px-0' : 'px-4 py-3 text-left',
-                      activeTab === item ? 'bg-[var(--accent)] text-[var(--accent-text)] shadow-sm shadow-black/20' : 'text-[var(--muted)] hover:bg-[var(--hover)] hover:text-[var(--text)]'
-                    )}
-                    title={t(sidebarCollapsed ? featureLabels[language][item] : undefined)}
-                    aria-label={t(featureLabels[language][item])}
-                  >
-                    <span className="flex items-center gap-3"><Icon name={navigationIcons[item]} />{!sidebarCollapsed && featureLabels[language][item]}</span>
-                  </button>
-                ))}
+            <div className="mt-4 min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,.18)_transparent]">
+              <nav id="sidebar-navigation" aria-label={t("Main menu")} className="space-y-2">
+                {tabs.map(item => <a key={item} href={paths[item]} aria-current={activeTab === item ? 'page' : undefined} className={cx('ds-nav-link', sidebarCollapsed && 'justify-center')} title={sidebarCollapsed ? featureLabels[language][item] : undefined} aria-label={featureLabels[language][item]} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); setActiveTab(item) } }}><Icon name={navigationIcons[item]} />{!sidebarCollapsed && featureLabels[language][item]}</a>)}
               </nav>
 
             </div>
 
-            <div className="mt-4 shrink-0 border-t border-[var(--border)] pt-3">
+            <div className="ds-sidebar-toggle-row mt-4 shrink-0">
               <button type="button" onClick={() => setSidebarCollapsed(current => !current)}
-                className={cx('flex min-h-12 w-full items-center gap-3 rounded-lg text-sm font-medium text-[var(--muted)] transition hover:bg-[var(--hover)] hover:text-[var(--text)]', sidebarCollapsed ? 'justify-center px-0' : 'px-4')}
+                className="ds-sidebar-toggle"
                 aria-expanded={!sidebarCollapsed} aria-controls="sidebar-navigation"
                 aria-label={t(sidebarCollapsed ? 'Expandir barra lateral' : 'Recolher barra lateral')}
                 title={t(sidebarCollapsed ? 'Expandir barra lateral' : 'Recolher barra lateral')}>
-                <Icon name="sidebar" />
+                <svg className="ds-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V6a3 3 0 0 0-3-3H5Zm2 3a1.5 1.5 0 0 0-1.5 1.5v9a1.5 1.5 0 0 0 3 0v-9A1.5 1.5 0 0 0 7 6Z" clipRule="evenodd" /></svg>
                 {!sidebarCollapsed && <span>{t('Recolher barra lateral')}</span>}
               </button>
             </div>
-            <div className="shrink-0 pt-3">
-              <div className={cx('rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] text-center text-xs font-medium leading-relaxed text-[var(--muted)]', sidebarCollapsed ? 'px-2 py-2' : 'px-4 py-2.5')}>
+            <div className="ds-sidebar-footer shrink-0">
+              <div className="text-center text-xs font-medium leading-relaxed text-[var(--muted)]">
                 {t(sidebarCollapsed ? APP_VERSION : `${COPYRIGHT} | ${APP_VERSION}`)}
               </div>
             </div>
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 bg-[radial-gradient(circle_at_top_left,rgba(1,118,211,0.10),transparent_32%),radial-gradient(circle_at_top_right,rgba(27,150,255,0.08),transparent_28%)]">
-          <header className="sticky top-0 z-10 bg-[var(--bg)] px-4 py-4 backdrop-blur-xl md:px-8">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-4">
-                <div>
-                  <h2 className="text-3xl font-semibold tracking-tight">{t(activeTab === 'Home' ? (language === 'pt-BR' ? 'Painel Quality Vision' : 'Quality Vision Dashboard') : featureLabels[language][activeTab])}</h2>
-                </div>
+        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 bg-[radial-gradient(circle_at_top_left,rgba(1,118,211,0.10),transparent_32%),radial-gradient(circle_at_top_right,rgba(27,150,255,0.08),transparent_28%)]">
+          <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--bg)] px-4 py-4 md:px-6">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <details className="ds-mobile-menu xl:hidden"><summary aria-label={t('Main menu')}><Icon name="sidebar" /></summary><nav aria-label={t('Main menu')}>{tabs.map(tab => <a key={tab} className="ds-nav-link" href={paths[tab]} aria-current={activeTab === tab ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); event.currentTarget.closest('details').open = false; setActiveTab(tab); requestAnimationFrame(() => document.getElementById('page-title')?.focus()) } }}><Icon name={navigationIcons[tab]} />{featureLabels[language][tab]}</a>)}</nav></details>
+                <h1 id="page-title" tabIndex={-1} className="font-semibold tracking-tight">{t(activeTab === 'Home' ? 'Painel Quality Vision' : featureLabels[language][activeTab])}</h1>
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <QaUserPill />
-              </div>
+              <QaUserPill compact />
             </div>
           </header>
 
-          <div className="space-y-4 p-4 md:p-6">
-            <nav aria-label={t(language === 'pt-BR' ? 'Menu principal' : 'Main menu')} className="flex flex-wrap gap-2 xl:hidden">{tabs.map((tab) => <Button key={tab} variant={tab === activeTab ? 'primary' : 'secondary'} onClick={() => setActiveTab(tab)}><Icon name={navigationIcons[tab]} />{featureLabels[language][tab]}</Button>)}</nav>
+          <div className="space-y-6 p-4 md:p-6">
+
             {feedback && (
-              <div className={cx(
+              <div role={feedbackTone === 'warning' ? 'alert' : 'status'} className={cx(
                 'rounded-2xl border px-4 py-3 text-sm font-semibold',
                 feedbackTone === 'warning'
                   ? 'border-[var(--orange)] bg-[var(--orange-soft)] text-[var(--orange)]'
@@ -665,20 +664,26 @@ export default function App() {
 
             {activeTab === tabs[0] && (
               <>
+                <HomeProjects projects={projectCatalog} flows={flowCatalog} execution={execution} navigate={navigate} />
                 {taskOverview.attention > 0 && <p className="rounded-xl border border-[var(--orange)] bg-[var(--orange-soft)] p-3 text-sm">{t('Prioritize blocked or impacted items before pulling new tasks.')}</p>}
-                <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                  <StatCard title={t("Total tasks")} value={stats.total}  />
-                  <StatCard title={t("Completed")} value={stats.Finalizado} sub={t("View completed tasks")} onClick={() => openTasksByStatus('Finalizado')} />
-                  <StatCard title={t("Blocked")} value={stats.Bloqueado} sub={t("View blocked tasks")} onClick={() => openTasksByStatus('Bloqueado')} />
-                  <StatCard title={t("Impacted")} value={stats.Impactado} sub={t("View impacted tasks")} onClick={() => openTasksByStatus('Impactado')} />
-                  <StatCard title={t("Open bugs")} value={bugs.filter(item => occurrenceActive(item, 'bugs')).length} onClick={() => navigate('Bugs')} />
-                  <StatCard title={t("Active impediments")} value={impediments.records.filter(item => occurrenceActive(item, 'impacts')).length} onClick={() => navigate('Impactos')} />
-                  <StatCard title={t("Blocked scenarios")} value={execution.records.filter(item => item.status === 'Bloqueado').length} onClick={() => navigate('Cenários', {status:'Bloqueado'})} />
+                {!projectCatalog.loading && !flowCatalog.loading && !scenarioCatalog.loading && !scenarioCatalog.records.length && <Card>
+                  <SectionTitle title={t('Start tracking quality')} />
+                  <p className="mb-4 text-sm text-[var(--muted)]">{t('Create a project and flow, then add your first scenario.')}</p>
+                  <ol className="mb-4 grid gap-3 sm:grid-cols-3">{[['Create project', projectCatalog.records.length > 0], ['Create flow', flowCatalog.records.length > 0], ['Add scenario', false]].map(([label,done],index) => <li key={label} className="flex items-center gap-2 text-sm"><Icon name={done ? 'check' : 'clock'} /><span>{index + 1}. {t(label)}{done && ` · ${t('Completed')}`}</span></li>)}</ol>
+                  <Button onClick={() => !projectCatalog.records.length ? navigate('Configuração', {section:'projects'}) : !flowCatalog.records.length ? navigate('Configuração', {section:'flows'}) : navigate('Cenários')}>{t(!projectCatalog.records.length ? 'Create project' : !flowCatalog.records.length ? 'Create flow' : 'Add scenario')}</Button>
+                </Card>}
+                <section aria-label={t('Items needing attention')}>
+                  <SectionTitle title={t('Items needing attention')} />
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <StatCard tone="failure" title={t('Blocked scenarios')} value={execution.records.filter(item => item.status === 'Bloqueado').length} onClick={() => navigate('Cenários', {status:'Bloqueado'})} />
+                    <StatCard tone="pending" title={t('Active impediments')} value={impediments.records.filter(item => occurrenceActive(item, 'impacts')).length} onClick={() => navigate('Impactos')} />
+                    <StatCard tone="failure" title={t('Open bugs')} value={bugs.filter(item => occurrenceActive(item, 'bugs')).length} onClick={() => navigate('Bugs')} />
+                  </div>
                 </section>
 
                 <section className="grid min-w-0 grid-cols-1 gap-6 ">
                   <Card className="min-w-0">
-                    <SectionTitle title={t("Items needing attention")} />
+                    <SectionTitle title={t("Tasks needing attention")} />
                     <div className="grid min-w-0 gap-3 md:grid-cols-2">
                       {homeInsights.attentionItems.map((item) => (
                         <RecordCard key={item.id} title={item.desc} status={item.status} meta={`${item.id} • ${item.type || 'Testes'} • ${item.project} • ${item.squad} • QA: ${item.owner}`} />
@@ -695,7 +700,7 @@ export default function App() {
                 <nav aria-label={t("Submenu de configuração")} className="flex flex-wrap gap-2">
                   {[['general', 'General'], ['squads', 'Squads'], ['projects', 'Projects'], ['flows', 'Flows'], ['types', 'Types'], ['status', 'Statuses']].map(([value, label]) => <Button key={value} variant={configurationTab === value ? 'primary' : 'secondary'} onClick={() => selectConfigurationTab(value)}>{t(label)}</Button>)}
                 </nav>
-                {configurationTab !== 'general' && !editingConfig.type && <Button disabled={configurationTab === 'flows' && !configData.projects.length} onClick={startConfigurationAdd}>{t("Adicionar")}</Button>}
+                {configurationTab !== 'general' && !editingConfig.type && <Button disabled={configurationTab === 'flows' && !projectCatalog.records.length} onClick={startConfigurationAdd}>{t("Adicionar")}</Button>}
               </div>
             )}
 
@@ -744,7 +749,7 @@ export default function App() {
                   {catalogTab === 'projects' ? (
                     <>
                       {editingConfig.type === 'project' && <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto]">
-                        <Field label={t("Project name")}><input
+                        <Field label={t("Project name")}><input required
                           value={configForm.project}
                           onChange={(event) => setConfigForm((current) => ({ ...current, project: event.target.value }))}
                           placeholder={t("Nome do projeto")}
@@ -787,7 +792,7 @@ export default function App() {
                                   }))
                                 }}
                               >{t(" Editar ")}</Button>
-                              <Button variant="danger" className="px-3 py-1.5 text-xs" onClick={() => deleteProject(project)}>{t("Excluir")}</Button>
+                              <Button variant="danger" className="px-3 py-1.5 text-xs" onClick={() => setPendingConfigDelete({label:project.name, project})}>{t("Excluir")}</Button>
                             </div>
                           </div>
                         ))}
@@ -798,7 +803,7 @@ export default function App() {
                   ) : (
                     <>
                       {editingConfig.type === 'squad' && <div className="flex flex-col gap-2 sm:flex-row">
-                        <input
+                        <input aria-label={t("Squad name")}
                           value={configForm.squad}
                           onChange={(event) => setConfigForm((current) => ({ ...current, squad: event.target.value }))}
                           placeholder={t("Nome da squad")}
@@ -814,7 +819,7 @@ export default function App() {
                           setConfigAddTarget('squad')
                           setConfigForm((current) => ({ ...current, squad: item }))
                         }}
-                        onDelete={(item) => deleteConfigItem('squads', item)}
+                        onDelete={(item) => setPendingConfigDelete({label:item, key:'squads'})}
                       />
                     </>
                   )}
@@ -822,7 +827,7 @@ export default function App() {
 
                 {['types', 'status'].includes(configurationTab) && <div className="min-w-0">
                   {editingConfig.type === workflowConfig.type && <div className="flex flex-col gap-2 sm:flex-row">
-                    <input
+                    <input aria-label={t(workflowConfig.placeholder)}
                       value={configForm[workflowConfig.type]}
                       onChange={(event) => setConfigForm((current) => ({ ...current, [workflowConfig.type]: event.target.value }))}
                       placeholder={t(workflowConfig.placeholder)}
@@ -842,7 +847,7 @@ export default function App() {
                       setConfigAddTarget(workflowConfig.type)
                       setConfigForm((current) => ({ ...current, [workflowConfig.type]: item }))
                     }}
-                    onDelete={(item) => deleteConfigItem(workflowConfig.key, item)}
+                    onDelete={(item) => setPendingConfigDelete({label:item, key:workflowConfig.key})}
                   />
                 </div>}
                 </div>
@@ -851,6 +856,17 @@ export default function App() {
 
             {activeTab === 'Configuração' && configurationTab === 'general' && (
               <Card>
+                  <div className="mb-6 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+                    <p className="font-semibold">{t('Demo projects')}</p>
+                    <p className="mt-2 text-sm text-[var(--muted)]">{t('Add Novigi, HP, Microsoft, AWS, Oracle and SAP with varied scenarios and three tasks needing attention. Existing records are preserved; loading again does not duplicate the demo.')}</p>
+                    <Button className="mt-4" variant="secondary" disabled={loadingDemo} onClick={async () => {
+                      if (demoLock.current) return
+                      demoLock.current = true; setLoadingDemo(true)
+                      try { await createDemoProjects(loggedQa.name); showFeedback('Demo projects loaded.'); navigate('Home') }
+                      catch (error) { showFeedback(error.message, 'warning') }
+                      finally { demoLock.current = false; setLoadingDemo(false) }
+                    }}>{t(loadingDemo ? 'Loading…' : 'Load demo projects')}</Button>
+                  </div>
                 {!hasFirebaseConfig && <div className="mb-4 rounded-xl border border-[var(--border)] p-4">
                   <p className="font-semibold">{t('Local application data')}</p>
                   <p className="mt-2 text-sm text-[var(--muted)]">{t('Clear projects and related records. A recovery copy remains available until restored. Appearance and language are preserved.')}</p>
@@ -922,29 +938,9 @@ export default function App() {
           </form>
         </dialog>
       )}
-      {pendingDeleteTask && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-          onClick={() => setPendingDeleteTask(null)}
-          role="presentation"
-        >
-          <div
-            className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--modal)] p-6 text-[var(--text)] shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-task-title"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--red)]">{t("Excluir tarefa")}</p>
-            <h3 id="delete-task-title" className="mt-2 text-xl font-semibold">{t("Confirmar exclusão?")}</h3>
-            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{t("A tarefa")}{pendingDeleteTask.id}{t("será removida permanentemente. Essa ação não pode ser desfeita.")}</p>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setPendingDeleteTask(null)}>{t("Cancelar")}</Button>
-              <Button variant="danger" onClick={deleteTask}>{t("Excluir tarefa")}</Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {pendingConfigDelete && <ConfirmDialog title="Delete" onCancel={() => setPendingConfigDelete(null)} onConfirm={() => pendingConfigDelete.project ? deleteProject(pendingConfigDelete.project) : deleteConfigItem(pendingConfigDelete.key, pendingConfigDelete.label)}><p>{pendingConfigDelete.label}</p></ConfirmDialog>}
+      {pendingDeleteTask && <ConfirmDialog title="Excluir tarefa" confirmLabel="Excluir tarefa" onCancel={() => setPendingDeleteTask(null)} onConfirm={deleteTask}><p>{pendingDeleteTask.desc}</p><p className="mt-2 text-[var(--muted)]">{pendingDeleteTask.id}</p></ConfirmDialog>}
+
     </div>
     </LanguageContext.Provider>
   )

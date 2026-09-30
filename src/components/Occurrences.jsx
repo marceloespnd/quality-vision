@@ -5,7 +5,7 @@ import { deleteDoc, doc } from 'firebase/firestore'
 import { db, hasFirebaseConfig } from '../firebase'
 import { saveRecord } from '../domain/records'
 import { bugStatuses, impedimentStatuses, occurrenceActive, validateOccurrence } from '../domain/occurrences'
-import { Button, Card, EmptyState, Field, inputClass, SelectField, StatusBadge } from './ui'
+import { ConfirmDialog, Button, Card, EmptyState, Field, inputClass, SelectField, StatusBadge } from './ui'
 
 export default function Occurrences({ kind, owner }) {
   const { t, locale } = useTranslation()
@@ -14,6 +14,7 @@ export default function Occurrences({ kind, owner }) {
   const statuses = bug ? bugStatuses : impedimentStatuses
   const [form, setForm] = useState(null), [error, setError] = useState(''), [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false), [filter, setFilter] = useState('all')
+  const [pendingDelete, setPendingDelete] = useState(null)
   const lock = useRef(false)
   const loading = records.loading || projects.loading || flows.loading || scenarios.loading
   const loadError = records.error || projects.error || flows.error || scenarios.error
@@ -37,13 +38,13 @@ export default function Occurrences({ kind, owner }) {
     finally { lock.current = false; setBusy(false) }
   }
   const remove = async item => {
-    if (lock.current || !window.confirm(t('Delete occurrence? This action cannot be undone.'))) return
+    if (lock.current) return
     lock.current = true; setBusy(true); setError('')
     try {
       if (hasFirebaseConfig && db) await deleteDoc(doc(db, kind, item.id))
       else saveLocalRecords(kind, records.records.filter(record => record.id !== item.id))
       setNotice('Occurrence deleted successfully.')
-    } catch (e) { setError(e.message) }
+    } catch (e) { setError(e.message); throw e }
     finally { lock.current = false; setBusy(false) }
   }
   const timestamp = value => value?.toDate?.() || (value ? new Date(value) : null)
@@ -71,10 +72,10 @@ export default function Occurrences({ kind, owner }) {
             <p className="mt-2 text-sm">{t('Blocks execution')}: {t(item.blocksExecution ? 'Yes' : 'No')}</p>
             <p className="mt-2 text-xs text-[var(--muted)]">{t('Started')}: {date(item.startedAt || item.createdAt)} · {t('Resolved at')}: {date(item.resolvedAt)}{hours !== null && <> · {t('Duration (hours)')}: {hours}</>}</p>
             {item.action && <p className="mt-2 whitespace-pre-wrap text-sm">{item.action}</p>}
-            <div className="mt-3 flex gap-3"><Button disabled={busy} variant="secondary" onClick={() => edit(item)}>{t('Edit')}</Button><Button disabled={busy} variant="danger" onClick={() => remove(item)}>{t('Delete')}</Button></div>
+            <div className="mt-3 flex gap-3"><Button disabled={busy} variant="secondary" onClick={() => edit(item)}>{t('Edit')}</Button><Button disabled={busy} variant="danger" onClick={() => setPendingDelete(item)}>{t('Delete')}</Button></div>
           </article>
         })}
-        {!loading && !loadError && !visible.length && <EmptyState>{t('No occurrences found.')}</EmptyState>}
+        {!loading && !loadError && !visible.length && <EmptyState action={<Button onClick={() => filter !== 'all' ? setFilter('all') : edit()}>{t(filter !== 'all' ? 'Clear filters' : bug ? 'Add bug' : 'Add impediment')}</Button>}>{t('No occurrences found.')}</EmptyState>}
       </> : <form onSubmit={save}>
         <Button variant="secondary" disabled={busy} onClick={() => setForm(null)}>{t('Back')}</Button>
         <fieldset disabled={busy || loading || Boolean(loadError)} className="mt-4 space-y-4">
@@ -85,7 +86,7 @@ export default function Occurrences({ kind, owner }) {
             <SelectField label={t('Status')} value={form.status} onChange={change('status')} options={statuses} />
           </div>
           <SelectField required label={t('Project')} value={form.projectId} onChange={e => setForm({...form, projectId:e.target.value,flowId:'',scenarioIds:[]})} options={[{value:'',label:t('Select a project')},...projects.records.map(p=>({value:p.id,label:p.name}))]} />
-          <SelectField label={t('Flow')} value={form.flowId} onChange={e=>setForm({...form,flowId:e.target.value,scenarioIds:[]})} options={[{value:'',label:t('All flows')},...flows.records.filter(f=>f.projectId===form.projectId).map(f=>({value:f.id,label:f.name}))]} />
+          <SelectField disabled={!form.projectId} help={!form.projectId ? "Select a project first." : undefined} label={t('Flow')} value={form.flowId} onChange={e=>setForm({...form,flowId:e.target.value,scenarioIds:[]})} options={[{value:'',label:t('All flows')},...flows.records.filter(f=>f.projectId===form.projectId).map(f=>({value:f.id,label:f.name}))]} />
           <fieldset className="rounded-xl border border-[var(--border)] p-4"><legend>{t('Affected scenarios')}</legend>
             <p className="mb-3 text-sm text-[var(--muted)]">{t('Leave unselected to cover the entire selected project or flow.')} {t('Select up to 8 scenarios or choose the entire flow.')}</p>
             {scenarios.records.filter(s=>s.projectId===form.projectId && (!form.flowId || s.flowId===form.flowId)).map(s=><label key={s.id} className="mb-2 flex items-center gap-2"><input type="checkbox" disabled={!form.scenarioIds.includes(s.id) && form.scenarioIds.length >= 8} checked={form.scenarioIds.includes(s.id)} onChange={e=>setForm({...form,scenarioIds:e.target.checked?[...form.scenarioIds,s.id]:form.scenarioIds.filter(id=>id!==s.id)})} />{s.title}</label>)}
@@ -97,5 +98,6 @@ export default function Occurrences({ kind, owner }) {
         </fieldset>
       </form>}
     </Card>
+    {pendingDelete && <ConfirmDialog title="Delete occurrence" onCancel={() => setPendingDelete(null)} onConfirm={() => remove(pendingDelete)}><p>{pendingDelete.desc}</p></ConfirmDialog>}
   </section>
 }

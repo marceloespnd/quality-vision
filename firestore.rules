@@ -8,21 +8,21 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.admin == true ||
-        request.auth.token.role in ['admin', 'qa_admin']
+        request.auth.token.get('admin', false) == true ||
+        request.auth.token.get('role', '') in ['admin', 'qa_admin']
       );
     }
 
     function isEditor() {
       return isSignedIn() && (
-        request.auth.token.role in ['editor', 'qa_editor', 'qa_admin'] ||
+        request.auth.token.get('role', '') in ['editor', 'qa_editor', 'qa_admin'] ||
         isAdmin()
       );
     }
 
     function isReader() {
       return isSignedIn() && (
-        request.auth.token.role in ['viewer', 'editor', 'qa_editor', 'qa_admin'] ||
+        request.auth.token.get('role', '') in ['viewer', 'editor', 'qa_editor', 'qa_admin'] ||
         isAdmin()
       );
     }

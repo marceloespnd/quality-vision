@@ -1,4 +1,4 @@
-export const APP_VERSION = 'v1.46.0'
+export const APP_VERSION = 'v1.48.0'
 export const COPYRIGHT = '© veltrix, 2026'
 
 export const tabs = ['Home', 'Visão do Projeto', 'Cenários', 'Impactos', 'Bugs', 'Configuração']

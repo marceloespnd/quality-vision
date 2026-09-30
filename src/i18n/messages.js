@@ -1,5 +1,46 @@
 // English source labels and their Brazilian Portuguese equivalents.
 export const messages = {
+  "Sign in to save and sync your projects with Firebase.": "Entre para salvar e sincronizar seus projetos com o Firebase.",
+  "Your account needs a role assigned by the Firebase administrator.": "Sua conta precisa de um perfil atribuído pelo administrador do Firebase.",
+  "Refresh access": "Atualizar acesso",
+  "Sign out": "Sair",
+  "Email": "E-mail",
+  "Password": "Senha",
+  "Sign in": "Entrar",
+  "Continue with Google": "Continuar com Google",
+  "Enable this sign-in provider in Firebase Authentication.": "Ative este método de login no Firebase Authentication.",
+  "Configure Firebase Authentication before signing in.": "Configure o Firebase Authentication antes de entrar.",
+  "Add this domain to Firebase Authentication authorized domains.": "Adicione este domínio aos domínios autorizados do Firebase Authentication.",
+  "Invalid email or password.": "E-mail ou senha inválidos.",
+  "Allow the sign-in popup in your browser.": "Permita a janela de login no navegador.",
+  "Unable to connect. Check your internet connection.": "Não foi possível conectar. Verifique sua conexão com a internet.",
+  "Unable to verify account permissions.": "Não foi possível verificar as permissões da conta.",
+  "Unable to sign in. Check your Firebase configuration.": "Não foi possível entrar. Verifique a configuração do Firebase.",
+
+  'Demo projects': 'Projetos de demonstração',
+  'Load demo projects': 'Carregar projetos de demonstração',
+  'Demo projects loaded.': 'Projetos de demonstração carregados.',
+  'Demo data is available only in local mode.': 'Os dados de demonstração estão disponíveis apenas no modo local.',
+  'Unable to read local records.': 'Não foi possível ler os registros locais.',
+  'Add Novigi, HP, Microsoft, AWS, Oracle and SAP with varied scenarios and three tasks needing attention. Existing records are preserved; loading again does not duplicate the demo.': 'Adicione Novigi, HP, Microsoft, AWS, Oracle e SAP com cenários variados e três tarefas que precisam de atenção. Os registros existentes são preservados; carregar novamente não duplica a demonstração.',
+
+  'Swipe to browse active projects, with blocked projects first.': 'Deslize para explorar os projetos ativos, com prioridade para os bloqueados.',
+  'Project pages': 'Paginação de projetos',
+  'Previous page': 'Página anterior',
+  'Next page': 'Próxima página',
+  'Page': 'Página',
+
+  'Quality at a glance': 'Qualidade em um olhar',
+  'Projects in progress': 'Projetos em andamento',
+  'Up to five active projects, with blocked projects first.': 'Até cinco projetos ativos, com prioridade para os bloqueados.',
+  'View projects': 'Ver projetos',
+  'View project': 'Ver projeto',
+  'Total scenarios': 'Total de cenários',
+  'Execution': 'Execução',
+  'No executable scenarios': 'Sem cenários executáveis',
+  'No projects in progress.': 'Nenhum projeto em andamento.',
+  'More active projects are available in the project view.': 'Mais projetos ativos estão disponíveis na visão do projeto.',
+
   'Back': 'Voltar',
   'Loading…': 'Carregando…',
   'No scenarios registered. Add the first one to link impediments.': 'Nenhum cenário cadastrado. Adicione o primeiro para vincular impedimentos.',
@@ -200,6 +241,30 @@ Object.assign(messages, {
   "Invalid status.": "Status inválido.",
   "Enter the exclusion reason.": "Informe a justificativa da exclusão.",
   "Enter a valid execution date.": "Informe uma data válida da execução."
+})
+Object.assign(messages, {
+  "Required": "Obrigatório",
+  "View details": "Ver detalhes",
+  "This action cannot be undone.": "Esta ação não pode ser desfeita.",
+  "Filters": "Filtros",
+  "Select a project first.": "Selecione um projeto primeiro.",
+  "Selected items": "itens selecionados",
+  "Clear selection": "Limpar seleção",
+  "Create flow": "Criar fluxo",
+  "Create project": "Criar projeto",
+  "Create a project and flow, then add your first scenario.": "Cadastre um projeto, crie um fluxo e adicione seu primeiro cenário.",
+  "Details": "Detalhes",
+  "Sort by": "Ordenar por",
+  "Default order": "Ordem padrão",
+  "Ascending": "Crescente",
+  "Descending": "Decrescente",
+  "Skip to content": "Ir para o conteúdo",
+  "Start tracking quality": "Comece a acompanhar a qualidade",
+  "Task overview": "Resumo de tarefas",
+  "Tasks needing attention": "Tarefas que precisam de atenção",
+  "Delete occurrence": "Excluir ocorrência",
+  "View scenarios": "Ver cenários",
+  "Main menu": "Menu principal"
 })
 const reverse = Object.fromEntries(Object.entries(messages).map(([en, pt]) => [pt, en]))
 const aliases = { 'Todas': 'All', 'Selecionar': 'Select', 'Crítica': 'Critical', 'Nome da squad': 'Squad name', 'Descrição Tarefa': 'Task description', 'Status': 'Status', 'Squad:': 'Squad:' }
