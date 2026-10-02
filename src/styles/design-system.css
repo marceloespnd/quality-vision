@@ -181,7 +181,7 @@ input[type=checkbox] { width: 20px; height: 20px; flex-shrink: 0; }
 main h2 { font-size: 20px; line-height: 1.4; font-weight: 600; }
 input[type=checkbox] { outline-offset: 3px; }
 
-html { scroll-padding-top: 112px; }
+html { scroll-padding-top: 24px; }
 main { overflow-wrap: anywhere; }
 
 /* Sidebar: comfortable expanded navigation and a centered compact icon rail. */

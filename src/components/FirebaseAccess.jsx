@@ -39,7 +39,7 @@ export default function FirebaseAccess({ children }) {
     finally { setBusy(false) }
   }
   if (!hasFirebaseConfig || session.allowed) return children
-  return <LanguageContext.Provider value={language}><main className="min-h-screen flex items-center justify-center bg-[var(--bg)] p-4 text-[var(--text)]"><Card className="w-full max-w-md">
+  return <LanguageContext.Provider value={language}><main className="liquid-access min-h-screen flex items-center justify-center p-4 text-[var(--text)]"><Card className="w-full max-w-md">
     <h1 className="text-2xl font-bold">Quality Vision</h1>
     <p className="mt-2 text-sm text-[var(--muted)]">{t('Sign in to save and sync your projects with Firebase.')}</p>
     {session.loading ? <p className="mt-4" role="status">{t('Loading…')}</p> : session.user ? <div className="mt-6 space-y-4">

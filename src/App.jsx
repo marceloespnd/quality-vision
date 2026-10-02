@@ -596,7 +596,7 @@ export default function App() {
 
   return (
     <LanguageContext.Provider value={language}>
-    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors">
+    <div className="liquid-shell min-h-screen text-[var(--text)] transition-colors">
       <a className="ds-skip" href="#main-content">{t("Skip to content")}</a>
       <div className="flex min-h-screen">
         <aside className={cx('hidden shrink-0 p-4 transition-all duration-300 xl:block', sidebarCollapsed ? 'w-[112px]' : 'w-[304px]')}>
@@ -638,8 +638,8 @@ export default function App() {
           </div>
         </aside>
 
-        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 bg-[radial-gradient(circle_at_top_left,rgba(1,118,211,0.10),transparent_32%),radial-gradient(circle_at_top_right,rgba(27,150,255,0.08),transparent_28%)]">
-          <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--bg)] px-4 py-4 md:px-6">
+        <main id="main-content" tabIndex={-1} className="liquid-main min-w-0 flex-1">
+          <header className="liquid-header relative z-20 px-4 py-4 md:px-6">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <details className="ds-mobile-menu xl:hidden"><summary aria-label={t('Main menu')}><Icon name="sidebar" /></summary><nav aria-label={t('Main menu')}>{tabs.map(tab => <a key={tab} className="ds-nav-link" href={paths[tab]} aria-current={activeTab === tab ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); event.currentTarget.closest('details').open = false; setActiveTab(tab); requestAnimationFrame(() => document.getElementById('page-title')?.focus()) } }}><Icon name={navigationIcons[tab]} />{featureLabels[language][tab]}</a>)}</nav></details>
@@ -649,7 +649,7 @@ export default function App() {
             </div>
           </header>
 
-          <div className="space-y-6 p-4 md:p-6">
+          <div className="liquid-content space-y-6 p-4 md:p-6">
 
             {feedback && (
               <div role={feedbackTone === 'warning' ? 'alert' : 'status'} className={cx(

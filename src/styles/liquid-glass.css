@@ -1,0 +1,141 @@
+/* Liquid Glass: shared surfaces complement the existing Tailwind utilities. */
+:root {
+  --bg: #edf1fa;
+  --sidebar: rgba(255, 255, 255, .42);
+  --surface: rgba(255, 255, 255, .36);
+  --surface-muted: rgba(255, 255, 255, .38);
+  --surface-input: rgba(255, 255, 255, .68);
+  --modal: rgba(247, 249, 255, .94);
+  --hover: rgba(255, 255, 255, .82);
+  --border: rgba(126, 145, 184, .25);
+  --control-border: rgba(100, 121, 164, .4);
+  --text: #1e2b49;
+  --muted: #536481;
+  --accent: #4b58dc;
+  --accent-hover: #3542bc;
+  --accent-text: #fff;
+  --accent-muted: rgba(95, 108, 232, .12);
+  --blue: #4554cf;
+  --blue-soft: rgba(95, 108, 232, .12);
+  --table-heading: rgba(228, 234, 251, .85);
+  --table-heading-text: #1e2b49;
+  --glass-highlight: rgba(255, 255, 255, .9);
+  --glass-reflection: rgba(255, 255, 255, .32);
+  --glass-shadow: 0 16px 48px rgba(57, 72, 120, .12), inset 0 1px 0 var(--glass-highlight), inset 1px 0 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(255,255,255,.25);
+  --glass-background: radial-gradient(ellipse at 8% 8%, #d5ddff 0, transparent 45%), radial-gradient(ellipse at 85% 15%, #d7f3ef 0, transparent 42%), radial-gradient(ellipse at 65% 95%, #eadbfd 0, transparent 50%), #edf1fa;
+  --radius-control: 12px;
+  --radius-card: 20px;
+  --radius-panel: 24px;
+}
+:root[data-theme="dark"] {
+  --bg: #101629;
+  --sidebar: rgba(27, 36, 61, .46);
+  --surface: rgba(33, 43, 70, .38);
+  --surface-muted: rgba(41, 53, 84, .42);
+  --surface-input: rgba(17, 25, 45, .64);
+  --modal: rgba(28, 37, 61, .95);
+  --hover: rgba(68, 81, 119, .6);
+  --border: rgba(175, 193, 237, .18);
+  --control-border: rgba(162, 182, 226, .38);
+  --text: #edf2ff;
+  --muted: #b3bfd9;
+  --accent: #adb5ff;
+  --accent-hover: #cbd0ff;
+  --accent-text: #192144;
+  --accent-muted: rgba(159, 171, 255, .16);
+  --blue: #adb5ff;
+  --blue-soft: rgba(159, 171, 255, .16);
+  --table-heading: rgba(32, 43, 72, .94);
+  --table-heading-text: #edf2ff;
+  --glass-highlight: rgba(219, 230, 255, .16);
+  --glass-reflection: rgba(210, 226, 255, .1);
+  --glass-shadow: 0 16px 48px rgba(0, 5, 23, .28), inset 0 1px 0 rgba(219,230,255,.32), inset 1px 0 0 rgba(219,230,255,.13), inset 0 -1px 0 rgba(219,230,255,.08);
+  --glass-background: radial-gradient(ellipse at 8% 8%, #29315d 0, transparent 45%), radial-gradient(ellipse at 85% 15%, #173d46 0, transparent 42%), radial-gradient(ellipse at 65% 95%, #35294e 0, transparent 50%), #101629;
+}
+body, #root, .liquid-shell, .liquid-access { background: var(--glass-background); background-attachment: fixed; }
+body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
+.liquid-main { --page-gutter: 24px; background: transparent; }
+.liquid-main > .liquid-content { padding-inline: var(--page-gutter); }
+.ds-card, .home-project-card, .ds-stat-card, .ds-sidebar, .ds-mobile-menu nav, .glass-panel {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+.ds-card, .home-project-card, .ds-stat-card { border-radius: var(--radius-panel); }
+.ds-sidebar { background: var(--sidebar); border-radius: 28px; }
+.liquid-header {
+  margin: 16px var(--page-gutter) 0; border: 1px solid var(--border); border-radius: 24px;
+  background: var(--sidebar); box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%);
+}
+/* A diagonal specular sheen gives every glass surface the same material. */
+:is(.ds-card, .home-project-card, .ds-stat-card, .ds-sidebar, .liquid-header, .ds-mobile-menu nav, .glass-panel) {
+  background-image: linear-gradient(135deg, var(--glass-reflection) 0%, transparent 38%, transparent 70%, var(--glass-reflection) 100%);
+  background-origin: border-box;
+  border-top-color: var(--glass-highlight);
+}
+.ds-button[data-variant=secondary], .ds-mobile-menu summary {
+  background-image: linear-gradient(135deg, var(--glass-reflection), transparent 65%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  backdrop-filter: blur(12px) saturate(180%);
+}
+.ds-sidebar .ds-nav-link[aria-current=page], .ds-nav-link[aria-current=page] {
+  background: var(--accent-muted); color: var(--accent); box-shadow: inset 0 1px 0 var(--glass-highlight);
+}
+.ds-sidebar .ds-nav-link[aria-current=page]::before { top: 17px; bottom: 17px; width: 3px; }
+.ds-sidebar .ds-nav-link, .ds-sidebar-toggle { border: 1px solid transparent; }
+.ds-sidebar .ds-nav-link:hover, .ds-sidebar-toggle:hover { border-color: var(--border); }
+.ds-button { box-shadow: inset 0 1px 0 var(--glass-highlight), 0 3px 8px rgba(30, 45, 90, .06); transition: background-color .2s, box-shadow .2s, transform .2s; }
+.ds-button[data-variant=primary] { background-image: linear-gradient(160deg, rgba(255,255,255,.2), transparent 70%); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 5px 16px rgba(75,88,220,.2); }
+.ds-button[data-variant=quiet] { box-shadow: none; }
+.ds-button:not(:disabled):active { transform: translateY(1px); }
+.ds-input { box-shadow: inset 0 2px 5px rgba(40,55,90,.035), 0 1px 0 var(--glass-highlight); }
+.ds-input:focus { border-color: var(--accent); background: var(--surface-input); }
+select option { background: var(--bg); color: var(--text); }
+.ds-status { border: 1px solid color-mix(in srgb, var(--status-fg) 18%, transparent); border-radius: 999px; }
+.ds-stat-card[data-tone] { background: linear-gradient(130deg, color-mix(in srgb, var(--stat-color) 10%, transparent), transparent 75%), var(--surface); border-color: var(--border); border-inline-start-width: 1px; border-top: 2px solid color-mix(in srgb, var(--stat-color) 60%, transparent); }
+.ds-stat-card[data-tone] > p:nth-child(2) { color: var(--text); font-size: 34px; letter-spacing: -.04em; }
+.ds-stat-card.ds-stat-interactive:hover { background: var(--hover); box-shadow: 0 16px 38px rgba(57,72,120,.13), inset 0 1px 0 var(--glass-highlight); }
+/* Equal card geometry across carousel pages, including the last partial page. */
+.home-projects-viewport { align-items: stretch; }
+.home-projects-page { align-items: stretch; grid-auto-rows: 1fr; }
+.home-project-card { height: 100%; padding: 24px; }
+.home-project-card-heading { gap: 12px; }
+.home-project-card h3 {
+  width: 100%; min-height: 2.8em; line-height: 1.4;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.home-project-card-heading .ds-status { min-height: 28px; }
+.home-project-owner {
+  min-height: 3em; line-height: 1.5;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
+.home-project-total { min-height: 40px; }
+.home-project-counts { grid-auto-rows: minmax(18px, auto); }
+.home-project-card > .ds-button { min-height: 44px; }
+.ds-stat-card { display: flex; flex-direction: column; height: 100%; }
+.ds-stat-card > p:first-child { min-height: 3em; }
+.ds-stat-card .ds-stat-link { margin-top: auto; padding-top: 12px; }
+.home-project-progress { height: 8px; background: var(--accent-muted); }
+.home-project-progress > span { background: linear-gradient(90deg, var(--accent), #8c9cff); }
+.home-project-total strong { letter-spacing: -.05em; font-weight: 600; }
+.ds-table { border-collapse: separate; border-spacing: 0; }
+.ds-table thead th:first-child { border-top-left-radius: 12px; }
+.ds-table thead th:last-child { border-top-right-radius: 12px; }
+.ds-table tbody td, .ds-table tbody th { border-bottom: 1px solid var(--border); }
+.ds-table tbody tr:hover { background: var(--accent-muted); }
+.ds-table tbody tr:last-child td, .ds-table tbody tr:last-child th { border-bottom: 0; }
+.ds-summary { padding: 16px; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 16px; margin-block: 12px; }
+dialog, .ds-dialog { background: var(--modal); border-radius: 24px; box-shadow: 0 32px 100px rgba(10,20,50,.3), inset 0 1px 0 var(--glass-highlight); -webkit-backdrop-filter: blur(32px); backdrop-filter: blur(32px); }
+dialog::backdrop { background: rgba(11, 18, 39, .45); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+/* Nested forms and record surfaces inherit the same material without extra blur layers. */
+main :is(div, form, section, label)[class*="border"][class*="bg-[var(--surface-muted)]"] { border-radius: 16px; box-shadow: inset 0 1px 0 var(--glass-highlight); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ds-card, .home-project-card, .ds-stat-card, .ds-sidebar, .liquid-header, .ds-mobile-menu nav, .glass-panel { background: var(--bg); }
+}
+@media (max-width: 1279px) { .liquid-header { margin-top: 12px; border-radius: 20px; } }
+@media (max-width: 767px) { .liquid-main { --page-gutter: 16px; } }
+@media (max-width: 540px) { .liquid-header { margin-top: 8px; padding: 12px; } main h1 { font-size: 21px !important; } .home-project-card { padding: 20px; } }
+@media (prefers-reduced-transparency: reduce) { .ds-card, .home-project-card, .ds-stat-card, .ds-sidebar, .liquid-header, .ds-mobile-menu nav, .glass-panel { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; } dialog { background: var(--bg); } }

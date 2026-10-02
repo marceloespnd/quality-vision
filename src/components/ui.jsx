@@ -22,7 +22,7 @@ export function Button({ children, variant = 'primary', className = '', disabled
   }
 
   return (
-    <button type="button" className={cx(base, variants[variant] || variants.primary, className)} disabled={disabled} {...props}>
+    <button type="button" data-variant={variant} className={cx(base, variants[variant] || variants.primary, className)} disabled={disabled} {...props}>
       {t(children)}
     </button>
   )
@@ -31,7 +31,7 @@ export function Button({ children, variant = 'primary', className = '', disabled
 export function Card({ children, className = '' }) {
   const { t } = useTranslation()
 
-  return <div className={cx('ds-card rounded-[16px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm', className)}>{t(children)}</div>
+  return <div className={cx('ds-card backdrop-blur-xl backdrop-saturate-[180%] rounded-[24px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm', className)}>{t(children)}</div>
 }
 
 export function Field({ label, children, help, error }) {

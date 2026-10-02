@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^git add -A && git commit -m \"Atualiza design system e componentes\" -m \"Co-authored-by: Copilot <223556219\\+Copilot@users\\.noreply\\.github\\.com>\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
