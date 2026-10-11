@@ -1,6 +1,14 @@
-# api-quality-vision v1.48.0
+# api-quality-vision v1.50.0
 
-Aplicação React + Vite para acompanhamento de indicadores de qualidade, evolução de ENs, histórico de bugs e configurações operacionais.
+Aplicação TypeScript + React + Vite para acompanhamento de indicadores de qualidade, evolução de ENs, histórico de bugs e configurações operacionais.
+
+## Stack padronizada
+
+TypeScript 5.9.3, React 19, Vite 8, Tailwind CSS 4 integrado ao build, Firebase 12
+e Chart.js 4 com react-chartjs-2 5. Node 24.21.0 e npm 11.19.0 são a referência local e Docker. Use `nvm use` e `npm ci` para reproduzir o ambiente.
+
+Consulte [a stack e os padrões técnicos](docs/stack.md). O build inclui a checagem
+de tipos; `npm run typecheck` permite executá-la separadamente.
 
 ## Melhorias recentes
 
@@ -20,8 +28,8 @@ Sem Firebase, os impactos persistem no navegador em `quality-vision-impacts`.
 Com Firebase, usam a coleção `impacts` e sincronização em tempo real. Publique as regras
 de `firestore.rules` no ambiente: leitores autenticados podem consultar, editores podem
 criar/editar e administradores podem excluir, seguindo os papéis já usados no projeto.
-O aplicativo atual não implementa login; ambientes com essas regras exigem a integração
-de autenticação existente antes de permitir acesso remoto.
+O aplicativo exige login com Firebase Authentication no modo remoto. Consulte
+a seção **Acesso ao Firebase** para configurar provedores e papéis.
 
 ## Cenários e vínculos
 
@@ -38,7 +46,9 @@ campo continuam válidos. As regras atualizadas devem ser publicadas para uso re
 ## Scripts
 
 ```bash
-npm install
+npm ci
+npm run typecheck
+npm test
 npm run dev
 npm run build
 npm run preview
@@ -48,13 +58,13 @@ npm run preview
 
 ```text
 src/
-  App.jsx
-  constants.js
-  utils.js
-  firebase.js
-  mockData.js
+  App.tsx
+  constants.ts
+  utils.ts
+  firebase.ts
+  mockData.ts
   components/
-    ui.jsx
+    ui.tsx
   assets/
 ```
 
@@ -87,14 +97,15 @@ VITE_FIREBASE_APP_ID
 Para publicar via CLI:
 
 ```bash
-npm install
+npm ci
 npm run build
 npx vercel
 ```
 
 ## Code review
 
-Consulte `CODE_REVIEW.md` para ver os pontos analisados, melhorias aplicadas e próximos passos recomendados.
+Antes de integrar alterações, execute `npm test` e `npm run build`; siga
+[os padrões técnicos](docs/stack.md) e [os padrões de interface](docs/design-system.md).
 
 ## Visão consolidada por projeto
 
@@ -117,8 +128,8 @@ As coleções são `projects`, `flows`, `scenarios` e `impacts`; no modo local, 
 chaves `quality-vision-*`. Publicar `firestore.rules` é necessário para uso remoto.
 Leitores podem consultar e editores podem criar/editar. Não se permite excluir
 projetos, fluxos ou cenários fisicamente. Cenários antigos podem ser lidos e passam
- a exigir a estrutura completa quando editados/associados. A autenticação continua
-sendo uma dependência do ambiente Firebase; nenhuma regra pública foi adicionada.
+ a exigir a estrutura completa quando editados/associados. A autenticação é realizada pelo Firebase Authentication, com permissões
+definidas pelas regras e pelos papéis do usuário.
 
 A execução é `(aprovados + falhados) / (total - excluídos)`; aprovação é
 `aprovados / (total - excluídos)`. Sem escopo válido, o percentual é indefinido,
@@ -137,7 +148,7 @@ As regras devem ser verificadas no emulador/ambiente Firebase antes da publicaç
 ## Idiomas da interface
 
 O seletor em Configuração → Geral controla pt-BR/en-US por contexto React. O
-catálogo está em `src/i18n/messages.js`; use `useTranslation()` para textos da
+catálogo está em `src/i18n/messages.ts`; use `useTranslation()` para textos da
 interface. Traduza os rótulos na renderização, mantendo IDs, valores dos filtros,
 status persistidos e textos cadastrados pelo usuário intactos. A preferência fica
 em `quality-vision-language`; valores inválidos usam pt-BR. Os testes de tradução
@@ -203,3 +214,7 @@ permissões nem abre as regras do banco.
 
 Os dados locais existentes são preservados no navegador. Eles não são enviados
 automaticamente ao Firebase quando o modo remoto é ativado.
+
+## Base técnica comum
+
+Consulte [o template e o contrato de validação](platform/README.md). Ambiente fixado: Node 24.21.0 e npm 11.19.0. Execute `nvm use`, `npm ci` e `npm run check:all`. React 19.3, Firebase 12.19, TypeScript 5.9.3 e Tailwind 4.3.3 são compartilhados. Vite 8.3.3 nas SPAs; Next 16.3 no Veltrix. TypeScript 5.9.3 é a linha comum de compatibilidade; versões do compilador só avançam após validação dos dois perfis.

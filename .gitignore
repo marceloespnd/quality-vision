@@ -4,3 +4,11 @@ dist
 .env
 .env.*
 !.env.example
+
+# Shared validation outputs
+test-results/
+playwright-report/
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+*.tsbuildinfo

@@ -1,7 +1,8 @@
-FROM node:22-alpine AS dependencies
+FROM node:24.21.0-alpine AS dependencies
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json package-lock.json .npmrc .nvmrc .node-version ./
+COPY platform ./platform
+RUN npm install --global npm@11.19.0 && npm ci
 
 FROM dependencies AS development
 COPY . .

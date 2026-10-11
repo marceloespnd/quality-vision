@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "Bundler",
+    "types": [
+      "vite/client",
+      "node"
+    ],
+    "noImplicitAny": false,
+    "useUnknownInCatchVariables": false
+  },
+  "include": [
+    "src",
+    "vite.config.ts",
+    "firebase/importSeed.ts",
+    "platform/shared/**/*.ts",
+    "platform/shared/**/*.tsx",
+    "playwright.config.ts",
+    "tests/e2e/**/*.ts"
+  ],
+  "extends": "./platform/tsconfig.base.json"
+}

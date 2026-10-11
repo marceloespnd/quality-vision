@@ -1,26 +1,56 @@
 {
   "name": "api-quality-vision",
   "private": true,
-  "version": "1.48.0",
+  "version": "1.50.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "test": "node --test src/domain/*.test.js",
+    "build": "npm run typecheck && vite build",
+    "test": "node --test src/domain/*.test.ts && npm run test:shared",
     "preview": "vite preview",
-    "seed": "node firebase/importSeed.mjs"
+    "seed": "node firebase/importSeed.ts",
+    "typecheck": "tsc --noEmit",
+    "env:check": "node platform/check-env.mjs",
+    "lint": "eslint .",
+    "test:e2e": "playwright test",
+    "test:shared": "node --test platform/shared/*.test.ts",
+    "test:auth": "firebase emulators:exec --only firestore --project demo-platform \"node --test tests/auth/*.test.mjs\"",
+    "check": "npm run env:check && npm run lint && npm run typecheck && npm test && npm run build",
+    "check:all": "npm run check && npm run test:e2e && npm run test:auth",
+    "preinstall": "node platform/check-env.mjs",
+    "start": "vite preview"
   },
   "dependencies": {
-    "chart.js": "^4.4.7",
-    "dotenv": "^16.6.1",
-    "firebase": "^11.1.0",
-    "react": "^18.3.1",
-    "react-chartjs-2": "^5.3.0",
-    "react-dom": "^18.3.1",
-    "update": "^0.7.4"
+    "chart.js": "^4.5.1",
+    "dotenv": "^17.4.2",
+    "firebase": "12.19.0",
+    "react": "19.3.0",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.10"
-  }
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "24.10.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vite": "8.3.3",
+    "eslint": "9.39.5",
+    "typescript-eslint": "8.67.0",
+    "@playwright/test": "1.62.1",
+    "@firebase/rules-unit-testing": "5.0.0",
+    "firebase-tools": "15.33.0"
+  },
+  "engines": {
+    "node": "24.21.0",
+    "npm": "11.19.0"
+  },
+  "overrides": {
+    "@firebase/firestore": {
+      "@grpc/grpc-js": "1.14.5"
+    }
+  },
+  "packageManager": "npm@11.19.0"
 }

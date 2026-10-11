@@ -2,7 +2,7 @@
 
 O visual Liquid Glass está em `src/styles/liquid-glass.css`, aplicado sobre os tokens base e as utilidades Tailwind. Todas as telas compartilham superfícies translúcidas, desfoque, bordas luminosas e gradientes ambientais, com temas claro e escuro. Evite desfoques adicionais em superfícies aninhadas. Há fallback opaco para navegadores sem backdrop-filter e preferência por transparência reduzida.
 
-A base está em `src/styles/design-system.css`; os componentes reutilizáveis estão em `src/components/ui.jsx` e `Icon.jsx`.
+A base está em `src/styles/design-system.css`; os componentes reutilizáveis estão em `src/components/ui.tsx` e `Icon.tsx`.
 
 - Espaçamento: 4, 8, 12, 16, 24 e 32 px. Use os tokens `--space-*` ou classes equivalentes.
 - Tipografia: títulos principais 24–28 px; seções 20 px; conteúdo 14–16 px; metadados 12 px.
@@ -14,6 +14,6 @@ A base está em `src/styles/design-system.css`; os componentes reutilizáveis es
 - Cores: use tokens semânticos de superfície, texto, borda, ação, sucesso, falha, pendência e exclusão. Variantes escuras dependem de data-theme no elemento raiz.
 - Ícones: `Icon`, traço uniforme, 20 px em navegação e 16 px em status. Ações sem texto precisam de aria-label no botão. Ícones decorativos ficam ocultos dos leitores de tela.
 - Acessibilidade: preserve foco visível, rótulos e navegação por teclado. Não comunique estado apenas com cor. Respeite redução de movimento.
-- Idioma: centralize textos fixos em `src/i18n`; traduza com `t`. Não traduza nomes de projetos, arquivos, responsáveis ou conteúdo cadastrado. Testes de tradução ficam em `src/domain/i18n.test.js`.
+- Idioma: centralize textos fixos em `src/i18n`; traduza com `t`. Não traduza nomes de projetos, arquivos, responsáveis ou conteúdo cadastrado. Testes de tradução ficam em `src/domain/i18n.test.ts`.
 
 Validação: `npm test` e `npm run build`. Confira visualmente os temas claro/escuro e os idiomas pt-BR/en-US ao alterar componentes compartilhados.
